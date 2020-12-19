@@ -17,8 +17,8 @@
  */
 void *get_in_addr(struct sockaddr *sa)
 {
-    if (sa->sa_family == AF_INET) {
-        return &(((struct sockaddr_in*)sa)->sin_addr);
+    if (sa->sa_family == AF_INET) { // AF_INET == IPv4
+        return &(((struct sockaddr_in*)sa)->sin_addr); // cast for convenience
     }
 
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
