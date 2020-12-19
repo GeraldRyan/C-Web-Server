@@ -54,7 +54,7 @@ int get_listener_socket(char *port)
     // Once we have a list of potential interfaces, loop through them
     // and try to set up a socket on each. Quit looping the first time
     // we have success.
-    for(p = servinfo; p != NULL; p = p->ai_next) {
+    for(p = servinfo; p != NULL; p = p->ai_next) {  // traverse the linked list
 
         // Try to make a socket based on this candidate interface
         if ((sockfd = socket(p->ai_family, p->ai_socktype,
