@@ -42,7 +42,7 @@ int get_listener_socket(char *port)
     // this machine (AI_PASSIVE).
 
     memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
+    hints.ai_family = AF_UNSPEC; // ipv4 or ipv6
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE; // use my IP
 
