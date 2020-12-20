@@ -48,6 +48,7 @@
  * 
  * Return the value from the send() function.
  */
+
 int send_response(int fd, char *header, char *content_type, void *body, int content_length)
 {
     const int max_response_size = 262144;
@@ -55,20 +56,21 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 
     // Build HTTP response and store it in response
 
-    char status[] = "HTTP/1.1 200 OK";
+    // char status[] = "HTTP/1.1 200 OK";
     time_t now;
     time(&now);
-    printf("This is the time now: %s\n", now); // TEMP
-    char connection[] = "Close";
-    char context[] = "text/html";
-    char body[] = "<!DOCTYPE html><html><head><title>Lambda School ...";
+    // printf("This is the time now: %s\n", now); // TEMP
+    // char connection[] = "Close";
+    // char context[] = "text/html";
+    // char body[] = "<!DOCTYPE html><html><head><title>Lambda School ...";
 
-    printf("this is response size before sprintf %i\n", strlen(response)); // TEMP
-    char header[max_response_size];
-    int header_size = sprintf(header, "%s\n Date: %s\n Connection: %s\n Content-length: %i\n Content-type: %s\n\n", status, now, connection, strlen(body), context);
+    // printf("this is response size before sprintf %i\n", strlen(response)); // TEMP
+    // char header[max_response_size];
+    // int header_size = sprintf(header, "%s\n Date: %s\n Connection: %s\n Content-length: %i\n Content-type: %s\n\n", status, now, connection, strlen(body), context);
 
-    int response_size_actual = sprintf(response, "%s\n Date: %s\n Connection: %s\n Content-length: %i\n Content-type: %s\n\n %s\n", status, ctime(&now), connection, strlen(body), context, body);
-    printf("this is response size before sprintf %i\n", strlen(response)); // TEMP
+    // int response_size_actual = sprintf(response, "%s\n Date: %s\n Connection: %s\n Content-length: %i\n Content-type: %s\n\n %s\n", status, ctime(&now), connection, strlen(body), context, body);
+    // printf("this is response size before sprintf %i\n", strlen(response)); // TEMP
+    int response_size_actual = sprintf(response, "%s\n Date: %s\n Connection: close\n Content-length: %i\n Content-type: %s\n\n %s\n", header, ctime(&now), content_length, content_type, body);
 
     int response_length = strlen(response);
 
@@ -237,6 +239,8 @@ int main(void)
         // listenfd is still listening for new connections.
 
         handle_http_request(newfd, cache);
+
+        resp_404(newfd); // USED TO TEST FUNCTIONALITY OF SEND_RESPONSE
 
         close(newfd);
     }
