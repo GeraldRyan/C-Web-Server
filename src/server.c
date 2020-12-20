@@ -60,7 +60,7 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     time_t now;
     time(&now);
 
-    int response_size_actual = sprintf(response, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n %s\n", header, ctime(&now), content_length, content_type, body);
+    int response_size_actual = sprintf(response, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n %s\n", header, ctime(&now), content_length, content_type, (char*)body);
     int response_length = strlen(response);
 
     ///////////////////
@@ -85,10 +85,11 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 void get_d20(int fd)
 {
     // Generate a random number between 1 and 20 inclusive
-
+    int res_num = rand() % 21;
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
+    send_response(fd, "HTTP/1.1 200 OK", "text/html", (int*) res_num, 1);
 
     // Use send_response() to send it back as text/plain data
 
@@ -167,30 +168,35 @@ void handle_http_request(int fd, struct cache *cache)
     char method[100], path[99], protocol[153];
 
     sscanf(request, "%s %s %s", method, path, protocol);
-    if (!strcmp('GET', method))
+    if (!strcmp("GET", method))
     {
-        if (!strcmp('/d20', path))
+        if (!strcmp("/d20", path))
         {
             //serve d20
+            // get_d20(fd);
+            resp_404(fd); // base case
         }
-        else if (!strcmp('/index.html', path))
+        else if (!strcmp("/index.html", path))
         {
             // index
-            get_file(fd, cache, "\\serverroot\\index.html");
+            resp_404(fd); // base case
+            // get_file(fd, cache, "\\serverroot\\index.html");
         }
-        else if (!strcmp('/cat.jpg', path))
+        else if (!strcmp("/cat.jpg", path))
         {
             // cat
-            get_file(fd, cache, "\\serverroot\\cat.jpg");
+            resp_404(fd); // base case
+            // get_file(fd, cache, "\\serverroot\\cat.jpg");
         }
         else
         {
             resp_404(fd); // base case
         }
     }
-    else if (!strcmp('POST', method))
+    else if (!strcmp("POST", method))
     {
         // base case
+        resp_404(fd); // base case
     }
     else
     {
