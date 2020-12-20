@@ -64,8 +64,10 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     char body[] = "<!DOCTYPE html><html><head><title>Lambda School ...";
 
     printf("this is response size before sprintf %i\n", strlen(response)); // TEMP
+    char header[max_response_size];
+    int header_size = sprintf(header, "%s\n Date: %s\n Connection: %s\n Content-length: %i\n Content-type: %s\n\n", status, now, connection, strlen(body), context);
 
-    int response_size_actual = sprintf(response, "%s\n Date: %s\n Connection: %s\n Content-length: %i\n Content-type: %s\n\n %s\n", status, now, connection, strlen(body), context, body);
+    int response_size_actual = sprintf(response, "%s\n Date: %s\n Connection: %s\n Content-length: %i\n Content-type: %s\n\n %s\n", status, ctime(&now), connection, strlen(body), context, body);
     printf("this is response size before sprintf %i\n", strlen(response)); // TEMP
 
     int response_length = strlen(response);
