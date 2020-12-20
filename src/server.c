@@ -55,7 +55,7 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 
     // Build HTTP response and store it in response
 
-    sprintf(response, "Text to write response in");
+    int response_size_actual = sprintf(response, "Text to write response in");
     int response_length = strlen(response);
 
 
