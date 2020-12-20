@@ -54,18 +54,25 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     char response[max_response_size];
 
     // Build HTTP response and store it in response
+
     char status[] = "HTTP/1.1 200 OK";
+    time_t now;
+    time(&now);
+    printf("This is the time now: %s\n", now); // TEMP
+    char connection[] = "Close";
+    char context[] = "text/html";
+    char body[] = "<!DOCTYPE html><html><head><title>Lambda School ...";
 
+    printf("this is response size before sprintf %i\n", strlen(response)); // TEMP
 
+    int response_size_actual = sprintf(response, "%s\n Date: %s\n Connection: %s\n Content-length: %i\n Content-type: %s\n\n %s\n", status, now, connection, strlen(body), context, body);
+    printf("this is response size before sprintf %i\n", strlen(response)); // TEMP
 
-    int response_size_actual = sprintf(response, "%s", status);
     int response_length = strlen(response);
-
 
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
-
 
     // Send it all!
     int rv = send(fd, response, response_length, 0);
