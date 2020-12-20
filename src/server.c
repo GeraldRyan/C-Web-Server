@@ -164,8 +164,43 @@ void handle_http_request(int fd, struct cache *cache)
         return;
     }
 
-    printf("Received %s", request);
+    char method[100], path[99], protocol[153];
 
+    sscanf(request, "%s %s %s", method, path, protocol);
+    if (!strcmp('GET', method))
+    {
+        if (!strcmp('/d20', path))
+        {
+            //serve d20
+        }
+        else if (!strcmp('/index.html', path))
+        {
+            // index
+            get_file(fd, cache, "\\serverroot\\index.html");
+        }
+        else if (!strcmp('/cat.jpg', path))
+        {
+            // cat
+            get_file(fd, cache, "\\serverroot\\cat.jpg");
+        }
+        else
+        {
+            resp_404(fd); // base case
+        }
+    }
+    else if (!strcmp('POST', method))
+    {
+        // base case
+    }
+    else
+    {
+        resp_404(fd); // base case
+    }
+
+    printf("METHOD: %s PATH %s PROTOCOL %s\n", method, path, protocol);
+
+    // printf("Received %s\n", request);
+    // Received GET / HTTP/1.1
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
@@ -229,8 +264,6 @@ int main(void)
         // listenfd is still listening for new connections.
 
         handle_http_request(newfd, cache);
-
-        resp_404(newfd); // USED TO TEST FUNCTIONALITY OF SEND_RESPONSE
 
         close(newfd);
     }
