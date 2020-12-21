@@ -53,6 +53,7 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 {
     const int max_response_size = 262144;
     char response[max_response_size];
+    char header_only[max_response_size];
 
     // Build HTTP response and store it in response
 
@@ -60,23 +61,43 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     time_t now;
     time(&now);
 
-    int response_size_actual = sprintf(response, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n %s\n", header, ctime(&now), content_length, content_type, body);
-    int response_length = strlen(response);
+    if (strcmp(content_type, "image/jpg")) // is not jpeg
+    {
+        // printf("ITS NOT AN IMAGE JPEG\n");
+        int response_size_actual = sprintf(response, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n %s\n", header, ctime(&now), content_length, content_type, body);
+        int response_length = strlen(response);
+        int rv = send(fd, response, response_length, 0);
+        if (rv < 0)
+        {
+            perror("send");
+        }
+
+        return rv;
+    }
+    else // is jpeg. Two sends
+    {
+        // printf("IT ISSSSSSSSSS A JPEG\n");
+        sprintf(header_only, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n", header, ctime(&now), content_length, content_type);
+        int header_length = strlen(header_only);
+        // printf("INT TOTAL LENGTH %d\n", total_length);
+        int rv = send(fd, header_only, header_length, 0);
+        int body_length = strlen(body);
+        int rvbody = send(fd, body, content_length, 0);
+        if (rv < 0)
+        {
+            perror("send");
+        }
+
+        return rv;
+    }
 
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
 
     // Send it all!
-    int rv = send(fd, response, response_length, 0);
+
     printf("RESPONSE SENT\n %s", response);
-
-    if (rv < 0)
-    {
-        perror("send");
-    }
-
-    return rv;
 }
 
 /**
@@ -153,7 +174,6 @@ void get_file(int fd, struct cache *cache, char *request_path)
     mime_type = mime_type_get(filepath);
 
     send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
-
     file_free(filedata);
     ///////////////////
     // IMPLEMENT ME! //
@@ -216,7 +236,8 @@ void handle_http_request(int fd, struct cache *cache)
         // }
         else
         {
-            if (!strcmp(path, "/")){
+            if (!strcmp(path, "/"))
+            {
                 printf("Here it's dumping\n");
                 sprintf(path, "/index.html");
             }
