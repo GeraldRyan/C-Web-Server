@@ -1,3 +1,11 @@
+/*
+TODO 
+1. POST
+2. Cache/LLHashtable
+
+*/
+
+
 /**
  * webserver.c -- A webserver written in C
  * 
@@ -57,13 +65,11 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 
     // Build HTTP response and store it in response
 
-    // char status[] = "HTTP/1.1 200 OK";
     time_t now;
     time(&now);
 
-    if (strcmp(content_type, "image/jpg")) // is not jpeg
+    if (strcmp(content_type, "image/jpg")) // is not jpeg (strcmp returns 0 if match)
     {
-        // printf("ITS NOT AN IMAGE JPEG\n");
         int response_size_actual = sprintf(response, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n %s\n", header, ctime(&now), content_length, content_type, body);
         int response_length = strlen(response);
         int rv = send(fd, response, response_length, 0);
@@ -71,15 +77,12 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
         {
             perror("send");
         }
-
         return rv;
     }
     else // is jpeg. Two sends
     {
-        // printf("IT ISSSSSSSSSS A JPEG\n");
         sprintf(header_only, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n", header, ctime(&now), content_length, content_type);
         int header_length = strlen(header_only);
-        // printf("INT TOTAL LENGTH %d\n", total_length);
         int rv = send(fd, header_only, header_length, 0);
         int body_length = strlen(body);
         int rvbody = send(fd, body, content_length, 0);
@@ -90,40 +93,18 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 
         return rv;
     }
-
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
-
-    // Send it all!
-
-    printf("RESPONSE SENT\n %s", response);
 }
 
-/**
- * Send a /d20 endpoint response
- */
 void get_d20(int fd)
 {
-    // Generate a random number between 1 and 20 inclusive
     char res_num[10];
     sprintf(res_num, "%d", rand() % 21);
     printf("res_num, %s", res_num);
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+
     send_response(fd, "HTTP/1.1 200 OK", "text/html", res_num, 1);
 
-    // Use send_response() to send it back as text/plain data
-
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
 }
 
-/**
- * Send a 404 response
- */
 void resp_404(int fd)
 {
     char filepath[4096];
@@ -160,13 +141,10 @@ void get_file(int fd, struct cache *cache, char *request_path)
     // fetch the file if any
     snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
 
-    printf("File path: %s\n", filepath);
     filedata = file_load(filepath);
 
-    printf("GET FILE RUNNING (AT LEAST)\n");
     if (filedata == NULL)
     {
-        printf("FILEDATA NULL IS THE PROBLEM\n");
         resp_404(fd);
         // return;
     }
@@ -175,9 +153,6 @@ void get_file(int fd, struct cache *cache, char *request_path)
 
     send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
     file_free(filedata);
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
 }
 
 /**
@@ -217,31 +192,15 @@ void handle_http_request(int fd, struct cache *cache)
     {
         if (!strcmp("/d20", path))
         {
-            printf("D20 RUNNING\n");
-            //serve d20
             get_d20(fd);
-            // resp_404(fd); // base case
         }
-        // else if (!strcmp("/index.html", path))
-        // {
-        //     // index
-        //     resp_404(fd); // base case
-        //     // get_file(fd, cache, "\\serverroot\\index.html");
-        // }
-        // else if (!strcmp("/cat.jpg", path))
-        // {
-        //     // cat
-        //     resp_404(fd); // base case
-        //     // get_file(fd, cache, "\\serverroot\\cat.jpg");
-        // }
+
         else
         {
             if (!strcmp(path, "/"))
             {
-                printf("Here it's dumping\n");
                 sprintf(path, "/index.html");
             }
-            printf("PATH %s", path);
             get_file(fd, cache, path); // base case
         }
     }
@@ -250,25 +209,18 @@ void handle_http_request(int fd, struct cache *cache)
         // base case
         resp_404(fd); // base case
     }
+    else if (!strcmp("POST", method)){
+        // TODO STRETCH GOAL
+
+        // Read body (so complete function above)
+        // parse data for releveant stuff
+        // do what you want with it
+    }
     else
     {
         resp_404(fd); // base case
     }
-
     printf("METHOD: %s PATH %s PROTOCOL %s\n", method, path, protocol);
-
-    // printf("Received %s\n", request);
-    // Received GET / HTTP/1.1
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
-
-    // Read the first two components of the first line of the request
-
-    // If GET, handle the get endpoints
-
-    //    Check if it's /d20 and handle that special case
-    //    Otherwise serve the requested file by calling get_file()
 
     // (Stretch) If POST, handle the post request
 }
@@ -322,7 +274,6 @@ int main(void)
         // listenfd is still listening for new connections.
 
         handle_http_request(newfd, cache);
-
         close(newfd);
     }
 
