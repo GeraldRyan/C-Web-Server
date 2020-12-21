@@ -132,6 +132,29 @@ void resp_404(int fd)
  */
 void get_file(int fd, struct cache *cache, char *request_path)
 {
+    char filepath[50];
+    struct file_data *filedata;
+    char *mime_type;
+
+    // fetch the file if any
+    snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
+
+    printf("File path: %s\n", filepath);
+    filedata = file_load(filepath);
+
+    printf("GET FILE RUNNING (AT LEAST)\n");
+    if (filedata == NULL)
+    {
+        printf("FILEDATA NULL IS THE PROBLEM\n");
+        resp_404(fd);
+        // return;
+    }
+
+    mime_type = mime_type_get(filepath);
+
+    send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
+
+    file_free(filedata);
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
@@ -172,8 +195,6 @@ void handle_http_request(int fd, struct cache *cache)
     sscanf(request, "%s %s %s", method, path, protocol);
     if (!strcmp("GET", method))
     {
-            printf("GET method running\n");
-
         if (!strcmp("/d20", path))
         {
             printf("D20 RUNNING\n");
@@ -181,21 +202,21 @@ void handle_http_request(int fd, struct cache *cache)
             get_d20(fd);
             // resp_404(fd); // base case
         }
-        else if (!strcmp("/index.html", path))
-        {
-            // index
-            resp_404(fd); // base case
-            // get_file(fd, cache, "\\serverroot\\index.html");
-        }
-        else if (!strcmp("/cat.jpg", path))
-        {
-            // cat
-            resp_404(fd); // base case
-            // get_file(fd, cache, "\\serverroot\\cat.jpg");
-        }
+        // else if (!strcmp("/index.html", path))
+        // {
+        //     // index
+        //     resp_404(fd); // base case
+        //     // get_file(fd, cache, "\\serverroot\\index.html");
+        // }
+        // else if (!strcmp("/cat.jpg", path))
+        // {
+        //     // cat
+        //     resp_404(fd); // base case
+        //     // get_file(fd, cache, "\\serverroot\\cat.jpg");
+        // }
         else
         {
-            resp_404(fd); // base case
+            get_file(fd, cache, path); // base case
         }
     }
     else if (!strcmp("POST", method))
@@ -205,7 +226,6 @@ void handle_http_request(int fd, struct cache *cache)
     }
     else
     {
-        printf("Else runningElse runningElse runningElse runningElse running\n");
         resp_404(fd); // base case
     }
 
