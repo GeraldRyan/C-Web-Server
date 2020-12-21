@@ -216,6 +216,11 @@ void handle_http_request(int fd, struct cache *cache)
         // }
         else
         {
+            if (!strcmp(path, "/")){
+                printf("Here it's dumping\n");
+                sprintf(path, "/index.html");
+            }
+            printf("PATH %s", path);
             get_file(fd, cache, path); // base case
         }
     }
