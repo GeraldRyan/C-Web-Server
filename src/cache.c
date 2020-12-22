@@ -135,4 +135,16 @@ struct cache_entry *cache_get(struct cache *cache, char *path)
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
+    if (1){ // see if found
+
+
+    int hash_of_path = ;
+
+
+
+    return cache[hash_of_path];
+    }
+    else{ // not found
+        return NULL;
+    }
 }
