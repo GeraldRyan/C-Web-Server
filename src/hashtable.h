@@ -6,7 +6,7 @@ struct hashtable {
     int num_entries; // Read-only
     float load; // Read-only
     struct llist **bucket;
-    int (*hashf)(void *data, int data_size, int bucket_count);
+    int (*hashf)(void *data, int data_size, int bucket_count); // pointer to function 
 };
 
 extern struct hashtable *hashtable_create(int size, int (*hashf)(void *, int, int));
