@@ -104,7 +104,7 @@ struct hashtable *hashtable_create(int size, int (*hashf)(void *, int, int))
     ht->num_entries = 0;
     ht->load = 0;
     ht->bucket = malloc(size * sizeof(struct llist *));
-    ht->hashf = hashf;
+    ht->hashf = hashf;  // This is like a promise to a function. It's a pointer to a function but we have not defined it yet. It's a promise then of sorts. The signatures match (void pointer return, and two ints as params. Even same name)
 
     for (int i = 0; i < size; i++) {
         ht->bucket[i] = llist_create();
@@ -153,7 +153,7 @@ void *hashtable_put(struct hashtable *ht, char *key, void *data)
  */
 void *hashtable_put_bin(struct hashtable *ht, void *key, int key_size, void *data)
 {
-    int index = ht->hashf(key, key_size, ht->size);
+    int index = ht->hashf(key, key_size, ht->size); // so index is this pointer to a function with a given set of specific arguments (that are matching in type- void pointer incarnated as I'm not sure what but having two int args.)
 
     struct llist *llist = ht->bucket[index];
 
