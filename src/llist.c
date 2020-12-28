@@ -104,7 +104,7 @@ void *llist_head(struct llist *llist)
 /**
  * Return the last element in a list
  */
-void *llist_tail(struct llist *llist)  // why was this void pointer, not llist_node pointer? 
+void *llist_tail(struct llist *llist)  
 {
 	struct llist_node *n = llist->head;
 
