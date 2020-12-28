@@ -80,7 +80,7 @@ int default_hashf(void *data, int data_size, int bucket_count)
         h = (R * h + p[i]) % bucket_count; // hashes the word (if word) letter per letter. 
     }
 
-    return h;
+    return h; // does every famous hash table use the mod function? I can see it being the case. I can also see it possibly not being the case. 
 }
 
 /**
@@ -92,7 +92,7 @@ struct hashtable *hashtable_create(int size, int (*hashf)(void *, int, int))
         size = DEFAULT_SIZE;
     }
 
-    printf("Hashf pointer to function parm (expect to be NULL) %d \n", hashf);
+    printf("Hashf pointer to function parm (expect to be NULL) %d \n", hashf); // my own code. 
 
     if (hashf == NULL) {
         printf("default_hashf pointer to function value (address?) %d\n", default_hashf); // added this for learning
@@ -158,6 +158,7 @@ void hashtable_destroy(struct hashtable *ht)
  */
 void *hashtable_put(struct hashtable *ht, char *key, void *data) // good that we're just given key. We can hash elsewhere.
 {
+    // notice the data is not the key itself. It can be, obviously. Just pass the same arguments for each, but I am used to having the one be the same in 2-sum algorithms and such. I think normalerweise it's not the case. I might have my username be the key and my personal data be the data in normal cases. I am used to 2-sums algorithm. 
     return hashtable_put_bin(ht, key, strlen(key), data);
 }
 
@@ -166,10 +167,9 @@ void *hashtable_put(struct hashtable *ht, char *key, void *data) // good that we
  */
 void *hashtable_put_bin(struct hashtable *ht, void *key, int key_size, void *data)
 {
-    int index = ht->hashf(key, key_size, ht->size); // This is where 'attached' p2f is invoked (with correct arg set)
-    // the key is not the index. The key transforms (hashes) into the index. Big difference. Why can't you just use key as index straight?  Run the hash via the function provided by hash table
+    int index = ht->hashf(key, key_size, ht->size); // hashes index
 
-    struct llist *llist = ht->bucket[index]; // A linkedlist size memory space is already there, via calloc. It could be null but it's there. We can check,a dn then append 
+    struct llist *llist = ht->bucket[index]; // A linkedlist size memory space is already there, via calloc. It could be null but it's there. We can check,a dn then append. So the ht->bucket was a double pointer or a pointer to a pointer, an array of pointers to structs. there are pointers to functions and pointers to structs and pointers to whatever. I knew this day would come. So to access the bucket property- that is easy. You are accessing a pointer (to an array of pointers) by accessing bucket. In this case we are going one level down, we are indexing, getting a specific struct pointer, I think. Struct 578 or something. My only curiosity is the bracket syntax. I'm sure I'm right and C just has that. That would mean index has a range. Of course you can get the index out of range error, that common error, if you go out of range. It knows the size of each element, I'm sure, because we calloced or malloced it. So we get the pointer to an array of pointers and then choose our chosen pointer out of them to get our chosen struct. Our chosen pointer is determined by our index, which is our hashed key, by calling the hash function attached to the struct as a pointer to a function, a pointer to executable (invocable) code. This is genius but it is the result of much focus, many design patterns. Don't be a worshipper. People do it from focus, out of need and desire, for money incentive and curiosity. Don't worship brilliance. Become brilliant. 
 
     struct htent *ent = malloc(sizeof *ent); // this struct defined above (lots of structs, lots of structs. structs structs structs. Know thy struct). This struct defined above has a key, keysize, hashedkey and data itself. Why does author want to store all this data in an entry? It is common practice? This is a design pattern to be scoured, confirmed by further observation. I can imagine uses or importance. 
     ent->key = malloc(key_size);  // void pointer-- so we don't know the size. THe size of the pointer is known but not what is pointed to. malloc doesn't take a pointer as arg, unlike free. It just takes a size_t. It knows it's only run on pointers because only they are on heap. I could be wrong with these 'absolutes' but I'm at least predominately right. So malloc doens't take a pointer but it returns a void pointer. So it returns a pointer so ent->key is a void pointer that's given a range of memory. This makes sense. The key_size size_t sets the range. This makes so much sense. 
@@ -177,17 +177,18 @@ void *hashtable_put_bin(struct hashtable *ht, void *key, int key_size, void *dat
     // so going back, first we had to malloc the key space with key_size and then we had to memcpy. Is this a pattern? Both times we used key_size. This has to be a pattern. Look out for malloc followed by memcpy with same final arg. 
     ent->key_size = key_size; // Now we just attach this int to the entry struct for future reference. 
     ent->hashed_key = index; // int that was already hashed above. attached function invoked
-    ent->data = data; // void pointer. Where is this malloc'd? 
+    ent->data = data; // void pointer. Where is this malloc'd? We have to malloc key so why not data? 
 
-    if (llist_append(llist, ent) == NULL) {
+    if (llist_append(llist, ent) == NULL) { // appending an htent onto linked list. 
         free(ent->key);
         free(ent);
         return NULL;
     }
 
-    add_entry_count(ht, +1);
+    add_entry_count(ht, +1);  // I can predict what this does. But does plus belong in the arg? I guess it is like negative one, they could just say one? 
 
-    return data;
+
+    return data; // this whole function returns a void pointer - actually the same it was passed in. Well that's if it ran through error free. It's just a convenience offering I suppose. 
 }
 
 /**
@@ -197,13 +198,13 @@ int htcmp(void *a, void *b)
 {
     struct htent *entA = a, *entB = b;
 
-    int size_diff = entB->key_size - entA->key_size;
+    int size_diff = entB->key_size - entA->key_size; // is this byte size or number value size? I think the latter. 
 
-    if (size_diff) {
+    if (size_diff) { // if the latter, it will always catch a difference. Iin which case, memcpy will rarely run. 
         return size_diff;
     }
 
-    return memcmp(entA->key, entB->key, entA->key_size);
+    return memcmp(entA->key, entB->key, entA->key_size); // returns pointer to entA->key. // why would we want to overright keys? I thought we were just comparing.  
 }
 
 /**
@@ -211,7 +212,7 @@ int htcmp(void *a, void *b)
  */
 void *hashtable_get(struct hashtable *ht, char *key)
 {
-    return hashtable_get_bin(ht, key, strlen(key));
+    return hashtable_get_bin(ht, key, strlen(key)); // this definition is so straightforward it hardly needs any analysis-- but peeking at the implementation requires some. 
 }
 
 /**
@@ -219,15 +220,15 @@ void *hashtable_get(struct hashtable *ht, char *key)
  */
 void *hashtable_get_bin(struct hashtable *ht, void *key, int key_size)
 {
-    int index = ht->hashf(key, key_size, ht->size);
+    int index = ht->hashf(key, key_size, ht->size); // get the index
 
-    struct llist *llist = ht->bucket[index];
+    struct llist *llist = ht->bucket[index]; // create and initialize the linked list from the bucket at index position.
 
     struct htent cmpent;
     cmpent.key = key;
     cmpent.key_size = key_size;
 
-    struct htent *n = llist_find(llist, &cmpent, htcmp);
+    struct htent *n = llist_find(llist, &cmpent, htcmp); // so htent contains key and keylenght. How are they used compared to linkedlist nodes? Both store data. Htent stores keys as well. Ah, htent IS the data. It goes in the data. Why then does it have a data property? Is it data of data? Payload type concept? 
 
     if (n == NULL) { return NULL; }
 
@@ -275,12 +276,22 @@ void *hashtable_delete_bin(struct hashtable *ht, void *key, int key_size)
 /**
  * Foreach callback function
  */
-void foreach_callback(void *vent, void *vpayload)
+void foreach_callback(void *vent, void *vpayload) // WHAT DOES THIS DO!!!??? 
 {
-	struct htent *ent = vent;
-	struct foreach_callback_payload *payload = vpayload;
+printf("Line 281 in hashtable.c Memory address of Vpayload %d\n", vpayload);
 
-	payload->f(ent->data, payload->arg);
+	struct htent *ent = vent; // we declare a new struct and make it the first arg. Why the indirection? 
+	struct foreach_callback_payload *payload = vpayload; // why the indirection? 
+// Struct Definition above. Used to cleanup the linked lists
+// struct foreach_callback_payload {
+// 	void *arg;
+// 	void (*f)(void *, void *); 
+// };
+printf("Line 290 in hashtable.c Memory address of payload (no v prefix) %d\n", payload);
+// if these two addresses are equal, then it tells me something (confirms) and it means this functino's job is to attach an anon function to the foreach_callback payload. So where is this called? IT IS NOT CALLED ANYWHERE! this investigation may have to be orphaned
+
+	payload->f(ent->data, payload->arg); // you access the f pointer to function. You invoke it with parentheses, passing two void pointers/ (v)ent->data and (v)payload->arg. So it's calling an attached pointed to function passing its own arg. 
+    // the parenthesis invoke (execute) the executable code in memory. Remember that. How does the system know? 
 }
 
 /**
@@ -288,16 +299,19 @@ void foreach_callback(void *vent, void *vpayload)
  *
  * Note: elements are returned in effectively random order.
  */
-void hashtable_foreach(struct hashtable *ht, void (*f)(void *, void *), void *arg)
+void hashtable_foreach(struct hashtable *ht, void (*f)(void *, void *), void *arg) // stay big picture this time. It takes a hashtable. It must iterate at least top level. Maybe it goes deeper but maybe it doesn't. It goes through each index or bucket of the table just from intuition. For each one it runs an anon function. This is just like javascript. You pass it an anonymous function. Now it is starting to click. I don't konw if JS engines were built from C but the concepts and principles are recurring, still foundational. Didn't know there were callback functions in C. Now you know. 
+// so a Pointer to Function big picture is a callback function, because it is a function passed as argument to other by Reference. Remember by value and by reference? Those old two birds. That's how simple it is.
+// So in the definition above, we're given a hashtable and a callback function (pointer to function) to call with two params. 
 {
-	struct foreach_callback_payload payload;
+	struct foreach_callback_payload payload; // here we're declaring a payload struct as in the function above, but we're never calling that function above. Instead we'er populating it with the arg parameters.  
 
+    // so receiving a callback function a function can do one of two things with it. It can invoke it or it can attach it (or technically it can also ignore it, conditionally or unconditionally). But in this case it attaches it, to the payload object it creates (one time) and then for each bucket in the ht it calls LLforeach and passes the payload. So basically for each bucket it calls llforeach- so basically a foreach inside a foreach passing one and the same payload to each.   
 	payload.f = f;
 	payload.arg = arg;
 
 	for (int i = 0; i < ht->size; i++) {
-		struct llist *llist = ht->bucket[i];
+		struct llist *llist = ht->bucket[i]; // has memory adds of current LL bucket. 
 
-		llist_foreach(llist, foreach_callback, &payload);
+		llist_foreach(llist, foreach_callback, &payload);  // &payload is the args required of the llforeach 
 	}
 }

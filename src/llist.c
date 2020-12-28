@@ -62,12 +62,12 @@ void *llist_insert(struct llist *llist, void *data)
 /**
  * Append to the end of a list
  */
-void *llist_append(struct llist *llist, void *data)
+void *llist_append(struct llist *llist, void *data)  // data pointer is struct htent. 
 {
 	struct llist_node *tail = llist->head;
 
 	// If list is empty, just insert
-	if (tail == NULL) {
+	if (tail == NULL) { // already calloced empty spot. 
 		return llist_insert(llist, data);
 	}
 
@@ -81,8 +81,8 @@ void *llist_append(struct llist *llist, void *data)
 		tail = tail->next;
 	}
 
-	n->data = data;
-	tail->next = n;
+	n->data = data; // ok so the LLnode carries an htent. So the hashtable carries linked lists, and the linked lists carry nodes and hte nodes carry htents. One htent per node I suppose. Nested structs all the way down. It's in the node's data property, and htent also has a data property, so node->data->data, which is lord konws what- our main user type of data. What was this project again?  
+	tail->next = n;  // this 'tail' is just a running marker. It's not being stored anywhere as tail, so we don't have to redefine it. Just pass a next object, n. 
 
 	llist->count++;
 
@@ -104,7 +104,7 @@ void *llist_head(struct llist *llist)
 /**
  * Return the last element in a list
  */
-void *llist_tail(struct llist *llist)
+void *llist_tail(struct llist *llist)  // why was this void pointer, not llist_node pointer? 
 {
 	struct llist_node *n = llist->head;
 
@@ -124,16 +124,16 @@ void *llist_tail(struct llist *llist)
  *
  * cmpfn should return 0 if the comparison to this node's data is equal.
  */
-void *llist_find(struct llist *llist, void *data, int (*cmpfn)(void *, void *))
+void *llist_find(struct llist *llist, void *data, int (*cmpfn)(void *, void *)) // void pointer as 2nd arg. Can be anything. It's htent pointer as seen in the wild. What is htent doing? Why that and llnode?  
 {
 	struct llist_node *n = llist->head;
 
 	if (n == NULL) {
-		return NULL;
+		return NULL; // nothing was found in this linked list. 
 	}
 
 	while (n != NULL) {
-		if (cmpfn(data, n->data) == 0) {
+		if (cmpfn(data, n->data) == 0) { // comparing each one, passing data object and the given data of the LL. 0 is hit.  
 			break;
 		}
 
@@ -203,8 +203,7 @@ void llist_foreach(struct llist *llist, void (*f)(void *, void *), void *arg) //
 
 	while (p != NULL) {
 		next = p->next;
-		f(p->data, arg);  // anonymous function. Can be anything. To be defined (passed in) elsewhere. This just does the looping. 
-		// what is arg for? Just for possibility? 
+		f(p->data, arg);  // Calls the function provided with the data of p and the args.   
 		p = next;
 	}
 	// when hashtable_destroy calls this function, it basically frees all the memory (garbage collects) for each item in a given linkedlist. 
