@@ -174,9 +174,10 @@ void *hashtable_put_bin(struct hashtable *ht, void *key, int key_size, void *dat
     struct htent *ent = malloc(sizeof *ent); // this struct defined above (lots of structs, lots of structs. structs structs structs. Know thy struct). This struct defined above has a key, keysize, hashedkey and data itself. Why does author want to store all this data in an entry? It is common practice? This is a design pattern to be scoured, confirmed by further observation. I can imagine uses or importance. 
     ent->key = malloc(key_size);  // void pointer-- so we don't know the size. THe size of the pointer is known but not what is pointed to. malloc doesn't take a pointer as arg, unlike free. It just takes a size_t. It knows it's only run on pointers because only they are on heap. I could be wrong with these 'absolutes' but I'm at least predominately right. So malloc doens't take a pointer but it returns a void pointer. So it returns a pointer so ent->key is a void pointer that's given a range of memory. This makes sense. The key_size size_t sets the range. This makes so much sense. 
     memcpy(ent->key, key, key_size); // returns void pointer (but we're not catching it. Why? Because we already have it? It's not really necessary with this I think- they just offer it for those who want it. Basically copy key into ent->key for key_size length. Any time we want to save size of thing, it could be bc of memcpy or similar. Take note. And these things have to be exact. Be worth a good salary, or even business creation ability, via partnership or single, but probably partnership. Be worth. Be salty. 
-    ent->key_size = key_size; // int
-    ent->hashed_key = index; // int 
-    ent->data = data; // void pointer
+    // so going back, first we had to malloc the key space with key_size and then we had to memcpy. Is this a pattern? Both times we used key_size. This has to be a pattern. Look out for malloc followed by memcpy with same final arg. 
+    ent->key_size = key_size; // Now we just attach this int to the entry struct for future reference. 
+    ent->hashed_key = index; // int that was already hashed above. attached function invoked
+    ent->data = data; // void pointer. Where is this malloc'd? 
 
     if (llist_append(llist, ent) == NULL) {
         free(ent->key);
