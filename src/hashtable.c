@@ -111,6 +111,8 @@ struct hashtable *hashtable_create(int size, int (*hashf)(void *, int, int))
     ht->bucket = malloc(size * sizeof(struct llist *));
     ht->hashf = hashf;  // the struct contains its own hashfunction function attached? There will be only one hashtable. It's method is attached, that is a pointer to a memory address of executable code that can be invoked when the signature matches.. the memory being available to the main code
 
+    // doesn't actually invoke hash function, just "attaches" it
+
     for (int i = 0; i < size; i++) {
         ht->bucket[i] = llist_create();  // llist_create returns a pointer to LL. It takes no args. All it does is Calloc a linkedlist as defined in llist.h. The llist contains a llnode and a count. The llNodes contain a pointer to data and a pointer to the next, so it basically contains a count of nodes nad the head node, which is strung to all the others. So this function creates an empty LinkedList for each index of the hashtable. BASICALLY THIS CALLOCS A LINKEDLIST WHICH IS A HEAD NODE AND A COUNT, AND THAT'S WHAT CREATES THE 'SIZE' PROPERTY. 
     }
@@ -154,7 +156,7 @@ void hashtable_destroy(struct hashtable *ht)
 /**
  * Put to hash table with a string key
  */
-void *hashtable_put(struct hashtable *ht, char *key, void *data)
+void *hashtable_put(struct hashtable *ht, char *key, void *data) // good that we're just given key. We can hash elsewhere.
 {
     return hashtable_put_bin(ht, key, strlen(key), data);
 }
@@ -164,16 +166,17 @@ void *hashtable_put(struct hashtable *ht, char *key, void *data)
  */
 void *hashtable_put_bin(struct hashtable *ht, void *key, int key_size, void *data)
 {
-    int index = ht->hashf(key, key_size, ht->size); // so index is this pointer to a function with a given set of specific arguments (that are matching in type- void pointer incarnated as I'm not sure what but having two int args.)
+    int index = ht->hashf(key, key_size, ht->size); // This is where 'attached' p2f is invoked (with correct arg set)
+    // the key is not the index. The key transforms (hashes) into the index. Big difference. Why can't you just use key as index straight?  Run the hash via the function provided by hash table
 
-    struct llist *llist = ht->bucket[index];
+    struct llist *llist = ht->bucket[index]; // A linkedlist size memory space is already there, via calloc. It could be null but it's there. We can check,a dn then append 
 
-    struct htent *ent = malloc(sizeof *ent);
-    ent->key = malloc(key_size);
-    memcpy(ent->key, key, key_size);
-    ent->key_size = key_size;
-    ent->hashed_key = index;
-    ent->data = data;
+    struct htent *ent = malloc(sizeof *ent); // this struct defined above (lots of structs, lots of structs. structs structs structs. Know thy struct). This struct defined above has a key, keysize, hashedkey and data itself. Why does author want to store all this data in an entry? It is common practice? This is a design pattern to be scoured, confirmed by further observation. I can imagine uses or importance. 
+    ent->key = malloc(key_size);  // void pointer-- so we don't know the size. THe size of the pointer is known but not what is pointed to. malloc doesn't take a pointer as arg, unlike free. It just takes a size_t. It knows it's only run on pointers because only they are on heap. I could be wrong with these 'absolutes' but I'm at least predominately right. So malloc doens't take a pointer but it returns a void pointer. So it returns a pointer so ent->key is a void pointer that's given a range of memory. This makes sense. The key_size size_t sets the range. This makes so much sense. 
+    memcpy(ent->key, key, key_size); // returns void pointer (but we're not catching it. Why? Because we already have it? It's not really necessary with this I think- they just offer it for those who want it. Basically copy key into ent->key for key_size length. Any time we want to save size of thing, it could be bc of memcpy or similar. Take note. And these things have to be exact. Be worth a good salary, or even business creation ability, via partnership or single, but probably partnership. Be worth. Be salty. 
+    ent->key_size = key_size; // int
+    ent->hashed_key = index; // int 
+    ent->data = data; // void pointer
 
     if (llist_append(llist, ent) == NULL) {
         free(ent->key);
