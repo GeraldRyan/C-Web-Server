@@ -2,8 +2,8 @@
 #include "llist.h"
 
 struct llist_node {
-	void *data;
-	struct llist_node *next;
+	void *data; // because it's a pointer, needs to be freed, because pointers live on stack. normal decs live on stack. 
+	struct llist_node *next; // this is freed in other function. It's a level higher than data so the 2nd runner function. 
 };
 
 /**
@@ -11,7 +11,8 @@ struct llist_node {
  */
 struct llist *llist_create(void)
 {
-	return calloc(1, sizeof(struct llist));
+	return calloc(1, sizeof(struct llist));  // creates 1 item, sets to zero bc that's what calloc is. 
+	// the calloc call doesn't 'know' we're creating a linked list. It just knows to reserve space in memory that is the exact size of it. This llist_create function doth return a llist struct but the calloc function doesn't know. Just the size has to be correct. Think in terms of memory. See what's there, with the mind's eye. 
 }
 
 /**
@@ -24,16 +25,18 @@ struct llist *llist_create(void)
  */
 void llist_destroy(struct llist *llist)
 {
-	struct llist_node *n = llist->head, *next;
+	struct llist_node *n = llist->head, *next; // n is memory address- not address of variable holding memory address. it is already dereferenced as 'free()' takes a pointer. It knows. Could have said llist->head I think. Different pointer but same memory address, I'm thinking. 
 
 	while (n != NULL) {
 		next = n->next;
-		free(n);
+		free(n); // this function obviously frees all linkedlist nodes and doesn't require any args except ll iself. 
 
 		n = next;
 	}
 
-	free(llist);
+	free(llist);  // free each and then finish by freeing list itself. 
+	
+	// hint for future- count the levels of data (linked items are same level as each other- number of levels underneath plus what is linked itself means number of times have to use a for or while loop). See patterns. Even better when self-discovered, not just read or memorized. 
 }
 
 /**
@@ -194,15 +197,17 @@ int llist_count(struct llist *llist)
 /**
  * For each item in the list run a function
  */
-void llist_foreach(struct llist *llist, void (*f)(void *, void *), void *arg)
+void llist_foreach(struct llist *llist, void (*f)(void *, void *), void *arg) // void(.f)(arg1, arg2) is what makes this a true "For Each" function. Is this how for each functions are implemented in higher level languages that are built by C? I would expect pointers including pointers to functions to be used heavily.  This functions job is just to pass in arguments to an anon function for each item in a linked list (and yes it has to be a linked list)
 {
-	struct llist_node *p = llist->head, *next;
+	struct llist_node *p = llist->head, *next; // basically runs anon function on each item in a LL, passing data and another arg into anon function. Two ways to do for loops to max. If you know max value, do the usual. Otherwise do while not NULL, in LL case. See this pattern. Momorize it. 
 
 	while (p != NULL) {
 		next = p->next;
-		f(p->data, arg);
+		f(p->data, arg);  // anonymous function. Can be anything. To be defined (passed in) elsewhere. This just does the looping. 
+		// what is arg for? Just for possibility? 
 		p = next;
 	}
+	// when hashtable_destroy calls this function, it basically frees all the memory (garbage collects) for each item in a given linkedlist. 
 }
 
 /**

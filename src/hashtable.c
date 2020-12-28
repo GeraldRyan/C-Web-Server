@@ -77,7 +77,7 @@ int default_hashf(void *data, int data_size, int bucket_count)
     unsigned char *p = data; 
 
     for (int i = 0; i < data_size; i++) {
-        h = (R * h + p[i]) % bucket_count;
+        h = (R * h + p[i]) % bucket_count; // hashes the word (if word) letter per letter. 
     }
 
     return h;
@@ -92,21 +92,27 @@ struct hashtable *hashtable_create(int size, int (*hashf)(void *, int, int))
         size = DEFAULT_SIZE;
     }
 
+    printf("Hashf pointer to function parm (expect to be NULL) %d \n", hashf);
+
     if (hashf == NULL) {
+        printf("default_hashf pointer to function value (address?) %d\n", default_hashf); // added this for learning
+        printf("addres of this 'hashtable_create' function (if inputting it wtihotu invoking it) %d\n", hashtable_create); // added this for learning
+
         hashf = default_hashf;
     }
-    struct hashtable *ht = malloc(sizeof *ht);
+    struct hashtable *ht = malloc(sizeof *ht);  
 
-    if (ht == NULL) return NULL;
+    if (ht == NULL) return NULL; // not sure this would ever be, but best practice?
 
+    // initialization or structure construction (compare to class constructor method)
     ht->size = size;
     ht->num_entries = 0;
     ht->load = 0;
     ht->bucket = malloc(size * sizeof(struct llist *));
-    ht->hashf = hashf; 
+    ht->hashf = hashf;  // the struct contains its own hashfunction function attached? There will be only one hashtable. It's method is attached, that is a pointer to a memory address of executable code that can be invoked when the signature matches.. the memory being available to the main code
 
     for (int i = 0; i < size; i++) {
-        ht->bucket[i] = llist_create();
+        ht->bucket[i] = llist_create();  // llist_create returns a pointer to LL. It takes no args. All it does is Calloc a linkedlist as defined in llist.h. The llist contains a llnode and a count. The llNodes contain a pointer to data and a pointer to the next, so it basically contains a count of nodes nad the head node, which is strung to all the others. So this function creates an empty LinkedList for each index of the hashtable. BASICALLY THIS CALLOCS A LINKEDLIST WHICH IS A HEAD NODE AND A COUNT, AND THAT'S WHAT CREATES THE 'SIZE' PROPERTY. 
     }
 
     return ht;
@@ -117,9 +123,9 @@ struct hashtable *hashtable_create(int size, int (*hashf)(void *, int, int))
  */
 void htent_free(void *htent, void *arg)
 {
-	(void)arg;
+	(void)arg; // not sure what this does.
 
-	free(htent);
+	free(htent); // free whatever htent is 
 }
 
 /**
@@ -132,8 +138,14 @@ void hashtable_destroy(struct hashtable *ht)
     for (int i = 0; i < ht->size; i++) {
         struct llist *llist = ht->bucket[i];
 
-		llist_foreach(llist, htent_free, NULL);
-        llist_destroy(llist);
+		llist_foreach(llist, htent_free, NULL); // the anon function passed in is htent_free, which is not invoked here. 
+        // It takes two void pointers but they are passed down inside the anon function f itself. All the compiler needs is the memory address of the anon funct. Think always of what the compiler needs. It just needs memory address of executable code. 
+        // This is kind of just like JavaScript. Now you can see how these funcitons are being implemented. 
+        // First frees the memory for each node in a linked list
+        llist_destroy(llist); // and then destroys the linkedlist itself
+        // and then goes to the next index of the hashtable. 
+        // so basically this is totally hashtable destructive, completely destroying (freeing) everything in it. Zero memory leaks. 
+        // Time complexity and space complexity, including memory leak plugging. 
     }
 
     free(ht);
