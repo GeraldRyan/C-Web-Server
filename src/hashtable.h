@@ -6,7 +6,7 @@ struct hashtable { // sizeof knows the size of this whole entity.
     int num_entries; // Read-only
     float load; // Read-only
     struct llist **bucket;
-    int (*hashf)(void *data, int data_size, int bucket_count); // pointer to function. This makes structs similar to classes, giving them connected functions (methods). So it will return an int each time. It's like an empty chamber. 
+    int (*hashf)(void *data, int data_size, int bucket_count); // pointer to function. This makes structs similar to classes, giving them connected functions (methods). So it will return an int each time. It's like an empty chamber.
 };
 
 extern struct hashtable *hashtable_create(int size, int (*hashf)(void *, int, int));

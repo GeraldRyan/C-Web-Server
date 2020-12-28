@@ -55,7 +55,7 @@ struct htent {
 // Used to cleanup the linked lists
 struct foreach_callback_payload {
 	void *arg;
-	void (*f)(void *, void *);
+	void (*f)(void *, void *); 
 };
 
 /**
@@ -74,7 +74,7 @@ int default_hashf(void *data, int data_size, int bucket_count)
 {
     const int R = 31; // Small prime
     int h = 0;
-    unsigned char *p = data;
+    unsigned char *p = data; 
 
     for (int i = 0; i < data_size; i++) {
         h = (R * h + p[i]) % bucket_count;
@@ -95,7 +95,6 @@ struct hashtable *hashtable_create(int size, int (*hashf)(void *, int, int))
     if (hashf == NULL) {
         hashf = default_hashf;
     }
-
     struct hashtable *ht = malloc(sizeof *ht);
 
     if (ht == NULL) return NULL;
@@ -104,7 +103,7 @@ struct hashtable *hashtable_create(int size, int (*hashf)(void *, int, int))
     ht->num_entries = 0;
     ht->load = 0;
     ht->bucket = malloc(size * sizeof(struct llist *));
-    ht->hashf = hashf;  // This is like a promise to a function. It's a pointer to a function but we have not defined it yet. It's a promise then of sorts. The signatures match (void pointer return, and two ints as params. Even same name)
+    ht->hashf = hashf; 
 
     for (int i = 0; i < size; i++) {
         ht->bucket[i] = llist_create();
