@@ -159,10 +159,23 @@ void get_file(int fd, struct cache *cache, char *request_path)
     char *mime_type;
 
     // fetch the file if any
-    snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
+    printf("\nBEFORE CACHE ENTRY\n");
+    struct cache_entry* ce = cache_get(cache, request_path); // seg fault here
+    printf("\nBEFORE CACHE ENTRY\n");
+    if (ce)
+    {
+        printf("GOT FROM CACHE\n\n");
+        send_response(fd, "HTTP/1.1 200 OK", ce->content_type, ce->content, ce->content_length);
+        return;
+    }
+    else
+    {
+        printf("GOT FROM LOCALSTORAGE (NOT CACHE)\n\n");
+        snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
 
-    filedata = file_load(filepath);
-
+        filedata = file_load(filepath); // basically runs fopen()
+        hashtable_put(cache->index, request_path, filedata);
+    }
     if (filedata == NULL)
     {
         resp_404(fd);
@@ -170,8 +183,8 @@ void get_file(int fd, struct cache *cache, char *request_path)
     }
 
     mime_type = mime_type_get(filepath);
-
     send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
+
     file_free(filedata);
 }
 
