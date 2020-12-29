@@ -40,6 +40,10 @@
 #define SERVER_FILES "./serverfiles"
 #define SERVER_ROOT "./serverroot"
 
+#define true (1 == 1)
+#define false (!true)
+#define WRAP_BODY true
+
 /**
  * Send an HTTP response
  *
@@ -55,22 +59,29 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     const int max_response_size = 262144;
     char response[max_response_size];
     char header_only[max_response_size];
-    char opent[] = "<p>";
-    char closet[] = "</p>";
+    char opent[] = "<h3>";
+    char closet[] = "</h3>";
 
     // Build HTTP response and store it in response
     time_t now;
     time(&now);
+    // header = HTTP/1.1 200 OK
+    // body = 10;
 
     if (strcmp(content_type, "image/jpg")) // is not jpeg (strcmp returns 0 if match)
     {
-        void* body_wrapper;
-        sprintf(body_wrapper, "%s%s%s", opent, body, closet); 
-        printf("body %s and body wrapper %s and length %zu\n", body, body_wrapper, strlen(body_wrapper));
-        content_length = strlen(body_wrapper);
-        sprintf(response, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n %s\n", header, ctime(&now), content_length, content_type, (char *)body_wrapper);
+        if (WRAP_BODY)
+        {
+            printf("body %s and old length %zu\n", body, strlen(body));
+            void *body_wrapper;
+            sprintf(body_wrapper, "%s%s%s", opent, body, closet);
+            sprintf(body, "%s", body_wrapper);
+            printf("body %s and body wrapper %s and new length %zu\n", body, body_wrapper, strlen(body));
+            content_length = strlen(body);
+        }
+        sprintf(response, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n %s\n", header, ctime(&now), content_length, content_type, (char *)body);
         int response_length = strlen(response);
-        int rv = send(fd, response, response_length, 0);
+        int rv = send(fd, response, response_length, 0); // send it off
         if (rv < 0)
         {
             perror("send");
@@ -186,13 +197,16 @@ void handle_http_request(int fd, struct cache *cache)
     }
 
     char method[100], path[99], protocol[153];
-
+    printf("REQUEST LINE 198 %s\n", request);
     sscanf(request, "%s %s %s", method, path, protocol);
+    printf("REQUEST LINE 200 %s\n", request);
+    printf("\nMETHOD!! %s\n", method); // GET
+
     if (!strcmp("GET", method))
     {
         if (!strcmp("/d20", path))
         {
-            get_d20(fd);
+            get_d20(fd); // method must be changing here
         }
 
         else
@@ -221,7 +235,8 @@ void handle_http_request(int fd, struct cache *cache)
     {
         resp_404(fd); // base case
     }
-    printf("METHOD: %s PATH %s PROTOCOL %s\n", method, path, protocol);
+    printf("\nMETHOD!! %s\n", method); // <h3>18</h3>
+    printf("METHOD (239): %s PATH %s PROTOCOL %s\n", method, path, protocol);
 
     // (Stretch) If POST, handle the post request
 }
