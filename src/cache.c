@@ -13,7 +13,7 @@ struct cache_entry *alloc_entry(char *path, char *content_type, void *content, i
     // IMPLEMENT ME! //
     ///////////////////
     // I think he just means allocate memory and initialize. We should have all the info to do that.
-    struct cache_entry *ce = calloc(1, sizeof(struct cache_entry));
+    struct cache_entry *ce = malloc(sizeof(struct cache_entry));
     ce->path = path;
     ce->content_type = content_type;
     ce->content = content;
@@ -29,9 +29,9 @@ void free_entry(struct cache_entry *entry)
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
-        free(entry->path);
-        free(entry->content_type);
-        free(entry->content);
+        // free(entry->path); /// THESE THREE SUB FREEs CRASH THE PROGRAM. BUT WHY???
+        // free(entry->content_type);
+        // free(entry->content);
         free(entry);
 }
 
@@ -117,7 +117,7 @@ struct cache *cache_create(int max_size, int hashsize)
 //     int max_size; // Maxiumum number of entries
 //     int cur_size; // Current number of entries
 // };
-    struct cache* cache = calloc(1, sizeof(struct cache*));
+    struct cache* cache = malloc(sizeof(struct cache));
     struct hashtable* ht = hashtable_create(hashsize, NULL); // if set size to 0, defaults to 128
     cache->index = ht;
     cache->head = NULL;
@@ -131,16 +131,17 @@ void cache_free(struct cache *cache)
 {
     struct cache_entry *cur_entry = cache->head;
 
-    hashtable_destroy(cache->index);
+    hashtable_destroy(cache->index); //both hashtable and linkedlists are destroyed in a nested for loop O(n*m)
 
     while (cur_entry != NULL)
     {
         struct cache_entry *next_entry = cur_entry->next;
 
-        free_entry(cur_entry);
+        free_entry(cur_entry);  
 
         cur_entry = next_entry;
     }
+
 
     free(cache);
 }
@@ -168,22 +169,21 @@ void cache_put(struct cache *cache, char *path, char *content_type, void *conten
     // cache->head = ce;
     dllist_insert_head(cache,ce); // automatically makes head the tail if head == NULL;
     //    * Store the entry in the hashtable as well, indexed by the entry's `path`.
-    struct cache_entry *cnt = hashtable_put(cache->index, path, content); // void pointer because we don't know type of data.
+    hashtable_put(cache->index, path, ce); // void pointer because we don't know type of data.
     //    * Increment the current size of the cache.
     cache->cur_size++;
     //    * If the cache size is greater than the max size:
     if (cache->cur_size > cache->max_size)
     {
         //      * Remove the cache entry at the tail of the linked list.
-        struct cache_entry *old_tail = cache->tail;
-        // cache->tail = cache->tail->prev;
-        dllist_remove_tail(cache);
+        struct cache_entry *old_tail = dllist_remove_tail(cache);
+        // cache->tail = cache->tail->prev;  
         //      * Remove that same entry from the hashtable, using the entry's `path` and the `hashtable_delete` function.
-        hashtable_delete(cache->index, path);
+        hashtable_delete(cache->index, old_tail->path);
         //      * Free the cache entry.
         free_entry(old_tail);
         //      * Ensure the size counter for the number of entries in the cache is correct.
-        cache->cur_size--;
+        cache->cur_size = cache->max_size;
     }
 }
 

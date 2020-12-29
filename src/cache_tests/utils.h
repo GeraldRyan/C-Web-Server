@@ -2,10 +2,13 @@
 #define _UTILS_H_
 
 #include "../cache.h"
+#include <stdio.h>
 
 int check_strings(char *input, char *expected)
 {
   for (; *input == *expected; input++, expected++) {
+    // how does this work? It keeps adding one to the pointers, pointer arithmetic. If input reaches end first it returns zero. 
+    printf("utils.h *input %d  *expected %d\n", * input, *expected);
     if (*input == '\0') {
       return 0; // 
     }

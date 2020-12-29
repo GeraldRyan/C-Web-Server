@@ -19,9 +19,7 @@ char *test_cache_create()
   mu_assert(cache->cur_size == 0, "The cur_size field of the cache should be initialized to 0");
   mu_assert(cache->max_size == max_size, "The max_size field of the cache was not initialized to the expected value");
   mu_assert(cache->index != NULL, "The index field of the cache was not initialized");
-
-  cache_free(cache);
-
+  cache_free(cache); 
   return NULL;
 }
 
@@ -40,7 +38,9 @@ char *test_cache_alloc_entry()
   mu_assert(check_strings(ce->content, content) == 0, "Your alloc_entry function did not allocate the content field to the expected string");
   mu_assert(ce->content_length == content_len, "Your alloc_entry function did not allocate the content_length field to the expected length");
 
-  free_entry(ce);
+  free_entry(ce); // error here 
+  printf("HEREHERE\n");
+
 
   return NULL;
 }
@@ -148,7 +148,7 @@ char *test_cache_get()
 
 char *all_tests()
 {
-  mu_suite_start();
+  mu_suite_start(); // this really just initializes a char pointer char *message = NULL
 
   mu_run_test(test_cache_create);
   mu_run_test(test_cache_alloc_entry);
