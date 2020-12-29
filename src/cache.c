@@ -194,16 +194,24 @@ struct cache_entry *cache_get(struct cache *cache, char *path)
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
-
+    // void* data;
     //    Algorithm:
     //    * Attempt to find the cache entry pointer by `path` in the hash table.
-    struct cache_entry *ce;
+    struct cache_entry *ce = malloc(sizeof(struct cache_entry));
+    ce->content = hashtable_get(cache->index, path); // this is only the data portion
 
-    ce = hashtable_get(cache->index, path);  // indeed returning but an empty shell not a full container
     //    * If not found, return `NULL`.
+    ce->content_type = "image/jpg";
+    // ce->content = data; // this breaks you
 
-    if (!ce)
+    ce->content_length = 10000;
+    printf("HEREasdfadsf\n");
+
+    ce->path = path;
+
+    if (!ce->content)
     {
+        printf("NULL\n");
         return NULL;
     }
     //    * Move the cache entry to the head of the doubly-linked list.
@@ -213,5 +221,7 @@ struct cache_entry *cache_get(struct cache *cache, char *path)
     // ce->next = cache->head;
     // cache->head = ce;
     //    * Return the cache entry pointer.
+    printf("HERE\n\n");
+
     return cache->head;
 }
