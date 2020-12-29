@@ -7,10 +7,10 @@ int check_strings(char *input, char *expected)
 {
   for (; *input == *expected; input++, expected++) {
     if (*input == '\0') {
-      return 0;
+      return 0; // 
     }
   }
-    
+  printf("Delete Me UTILS.H input*-expected* %d\n", *input - *expected);
   return *input - *expected;
 }
 

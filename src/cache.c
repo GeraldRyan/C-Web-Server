@@ -175,7 +175,7 @@ void cache_put(struct cache *cache, char *path, char *content_type, void *conten
     if (cache->cur_size > cache->max_size)
     {
         //      * Remove the cache entry at the tail of the linked list.
-        // struct cache_entry *old_tail = cache->tail;
+        struct cache_entry *old_tail = cache->tail;
         // cache->tail = cache->tail->prev;
         dllist_remove_tail(cache);
         //      * Remove that same entry from the hashtable, using the entry's `path` and the `hashtable_delete` function.
