@@ -42,7 +42,8 @@
 
 #define true (1 == 1)
 #define false (!true)
-#define WRAP_BODY true
+#define WRAP_BODY false // need to debug otherwise it can crash or glitch. works sometimes at certain endpoints /d20 for certain tags
+#define EXTRA true
 
 /**
  * Send an HTTP response
@@ -59,8 +60,9 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     const int max_response_size = 262144;
     char response[max_response_size];
     char header_only[max_response_size];
-    char opent[] = "<h3>";
-    char closet[] = "</h3>";
+    char page_header[] = "<div style=\"color:black\">Endpoings are <ul>/d20</ul><ul></ul><ul>/d20</ul>, </div>";
+    char opent[] = "<h1>";
+    char closet[] = "</h1>";
 
     // Build HTTP response and store it in response
     time_t now;
@@ -72,11 +74,11 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     {
         if (WRAP_BODY)
         {
-            printf("body %s and old length %zu\n", body, strlen(body));
-            void *body_wrapper;
-            sprintf(body_wrapper, "%s%s%s", opent, body, closet);
-            sprintf(body, "%s", body_wrapper);
-            printf("body %s and body wrapper %s and new length %zu\n", body, body_wrapper, strlen(body));
+            printf("body %s and old length %zu\n", (char *)body, strlen(body));
+            void *body_wrapper = malloc(sizeof(char) * 100);
+            sprintf(body_wrapper, "%s%s%s", opent, (char *)body, closet);
+            sprintf(body, "%s", (char *)body_wrapper);
+            printf("body %s and body wrapper %s and new length %zu\n", (char *)body, (char *)body_wrapper, strlen(body));
             content_length = strlen(body);
         }
         sprintf(response, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n %s\n", header, ctime(&now), content_length, content_type, (char *)body);
@@ -111,8 +113,16 @@ void get_d20(int fd)
     char res_num[10];
     sprintf(res_num, "%d", rand() % 21);
     printf("res_num, %s", res_num);
-
-    send_response(fd, "HTTP/1.1 200 OK", "text/html", res_num, 1);
+    if (EXTRA)
+    {
+        char body_to_send[34];
+        sprintf(body_to_send, "Your random number of the day is %s", res_num);
+        send_response(fd, "HTTP/1.1 200 OK", "text/html", body_to_send, 34);
+    }
+    else
+    {
+        send_response(fd, "HTTP/1.1 200 OK", "text/html", res_num, 1);
+    }
 }
 
 void resp_404(int fd)
