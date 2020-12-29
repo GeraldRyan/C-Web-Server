@@ -1,10 +1,3 @@
-/*
-TODO 
-1. POST
-2. Cache/LLHashtable
-
-*/
-
 
 /**
  * webserver.c -- A webserver written in C
@@ -70,7 +63,7 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 
     if (strcmp(content_type, "image/jpg")) // is not jpeg (strcmp returns 0 if match)
     {
-        int response_size_actual = sprintf(response, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n %s\n", header, ctime(&now), content_length, content_type, body);
+        int rsa = sprintf(response, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n %s\n", header, ctime(&now), content_length, content_type, (char *)body);
         int response_length = strlen(response);
         int rv = send(fd, response, response_length, 0);
         if (rv < 0)
@@ -97,12 +90,13 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 
 void get_d20(int fd)
 {
+    time_t t;
+    srand(time(&t));
     char res_num[10];
     sprintf(res_num, "%d", rand() % 21);
     printf("res_num, %s", res_num);
 
     send_response(fd, "HTTP/1.1 200 OK", "text/html", res_num, 1);
-
 }
 
 void resp_404(int fd)
@@ -166,6 +160,7 @@ char *find_start_of_body(char *header)
     ///////////////////
     // IMPLEMENT ME! // (Stretch)
     ///////////////////
+    return header;
 }
 
 /**
@@ -209,7 +204,8 @@ void handle_http_request(int fd, struct cache *cache)
         // base case
         resp_404(fd); // base case
     }
-    else if (!strcmp("POST", method)){
+    else if (!strcmp("POST", method))
+    {
         // TODO STRETCH GOAL
 
         // Read body (so complete function above)
