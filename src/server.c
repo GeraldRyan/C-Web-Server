@@ -55,15 +55,20 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     const int max_response_size = 262144;
     char response[max_response_size];
     char header_only[max_response_size];
+    char opent[] = "<p>";
+    char closet[] = "</p>";
 
     // Build HTTP response and store it in response
-
     time_t now;
     time(&now);
 
     if (strcmp(content_type, "image/jpg")) // is not jpeg (strcmp returns 0 if match)
     {
-        int rsa = sprintf(response, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n %s\n", header, ctime(&now), content_length, content_type, (char *)body);
+        void* body_wrapper;
+        sprintf(body_wrapper, "%s%s%s", opent, body, closet); 
+        printf("body %s and body wrapper %s and length %zu\n", body, body_wrapper, strlen(body_wrapper));
+        content_length = strlen(body_wrapper);
+        sprintf(response, "%s\n Date: %s Connection: close\n Content-length: %i\n Content-type: %s\n\n %s\n", header, ctime(&now), content_length, content_type, (char *)body_wrapper);
         int response_length = strlen(response);
         int rv = send(fd, response, response_length, 0);
         if (rv < 0)
