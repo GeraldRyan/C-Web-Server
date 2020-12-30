@@ -68,11 +68,22 @@ void dllist_move_to_head(struct cache *cache, struct cache_entry *ce)
             cache->tail = ce->prev;
             cache->tail->next = NULL;
         }
+        else if (ce->prev == NULL && ce->next == NULL) // newborn
+        { 
+            ce->next = cache->head;
+            cache->head = ce;
+            return;
+        }
         else
         {
             // We're neither the head nor the tail
-            ce->prev->next = ce->next;
+            printf("aaaaaaa\n");
+
+            ce->prev->next = ce->next; // seg fault here
+            // printf("HEREasdfsffffffadsf\n");
+
             ce->next->prev = ce->prev;
+            // printf("HEREasdfsffffffadsf\n");
         }
 
         ce->next = cache->head;
@@ -198,24 +209,27 @@ struct cache_entry *cache_get(struct cache *cache, char *path)
     //    Algorithm:
     //    * Attempt to find the cache entry pointer by `path` in the hash table.
     struct cache_entry *ce = malloc(sizeof(struct cache_entry));
-    ce->content = hashtable_get(cache->index, path); // this is only the data portion
+    ce = hashtable_get(cache->index, path); // this is only the data portion
+    // ce->content = hashtable_get(cache->index, path); // this is only the data portion
 
-    //    * If not found, return `NULL`.
-    ce->content_type = "image/jpg";
-    // ce->content = data; // this breaks you
+    // //    * If not found, return `NULL`.
+    // ce->content_type = "image/jpg";
+    // // ce->content = data; // this breaks you
 
-    ce->content_length = 10000;
+    // ce->content_length = 10000;
+
+    // ce->path = path;
+
+    // if (!ce->content)
+    // {
+    //     printf("NULL\n");
+    //     return NULL;
+    // }
+    //    * Move the cache entry to the head of the doubly-linked list.
+
+    dllist_move_to_head(cache, ce); // breaks here
     printf("HEREasdfadsf\n");
 
-    ce->path = path;
-
-    if (!ce->content)
-    {
-        printf("NULL\n");
-        return NULL;
-    }
-    //    * Move the cache entry to the head of the doubly-linked list.
-    dllist_move_to_head(cache, ce);
     // ce->next->prev = ce->prev;
     // ce->prev->next = ce->next;
     // ce->next = cache->head;
@@ -223,5 +237,5 @@ struct cache_entry *cache_get(struct cache *cache, char *path)
     //    * Return the cache entry pointer.
     printf("HERE\n\n");
 
-    return cache->head;
+    return ce;
 }
