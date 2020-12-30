@@ -1,6 +1,7 @@
 typedef struct QNode {
     struct QNode *prev, *next;
     unsigned bucket;
+    int key;
     int data;
 } QNode;
 
@@ -22,23 +23,23 @@ typedef struct LRUCache{
     
 } LRUCache;
 
-QNode* newQNode(unsigned bucket){
-    QNode* temp = malloc(sizeof(struct QNode));
+struct QNode* newQNode(unsigned bucket){
+    struct QNode* temp = malloc(sizeof(struct QNode));
     temp->bucket = bucket;
     temp->prev = temp->next = NULL;
     return temp;
 }
 
-Queue* createQueue(int numberOfFrames){
-    Queue *queue = malloc(sizeof(struct Queue));
+struct Queue* createQueue(int numberOfFrames){
+    struct Queue *queue = malloc(sizeof(struct Queue));
     queue->count = 0;
     queue->numberOfFrames = numberOfFrames;
     queue->front = queue->rear = NULL;
     return queue;
 }
 
-Hash* createHash(int capacity){
-    Hash* hash = malloc(sizeof(struct Hash));
+struct Hash* createHash(int capacity){
+    struct Hash* hash = malloc(sizeof(struct Hash));
     hash->capacity = capacity;
     hash->array = malloc(sizeof(struct QNode)*hash->capacity);
     for (int i=0; i<hash->capacity; i++){
@@ -59,25 +60,27 @@ void deQueue(Queue* queue){ // we could have return QNode but how would affect m
     if (isQueueEmpty(queue)){
         return;
     }
-    if (queue->front == queue->rear){
-        queue->rear = NULL;
+    if (queue->front == queue->rear){ // LL of one
+        queue->front = NULL;
     }
     QNode* temp = queue->rear;
     queue->rear = queue->rear->prev;
     if (queue->rear){
         queue->rear->next = NULL;
     }
-    free(temp); // we declared temp just to be able to free it.
     queue->count--;
+    // free(temp); // This creates an AddressSanitizer error heap-use-after-free.
+
 }
 
-void Enqueue(Queue* queue, Hash* hash, int value, unsigned bucket){ // actually also en-hashes
+void Enqueue(Queue* queue, Hash* hash, int value, unsigned bucket, int key){ // also adds to hash
     if (AreAllFramesFull(queue)){
         hash->array[queue->rear->bucket] = NULL;
         deQueue(queue); // goodbye
     }
     QNode* temp = newQNode(bucket);
     temp->data = value; // obviously have to put the value in there
+    temp->key = key; // needed for handling hash collisions
     temp->next = queue->front;
     if (isQueueEmpty(queue)){
         queue->rear = queue->front = temp;
@@ -96,9 +99,9 @@ unsigned int hashfunc(unsigned capacity, int key){
 }
 
 int searchCache(struct LRUCache* cache, int key){
-    // look in hash for item "key"
+    // look in hash for item of "key"; double check key=key in case of collision
     unsigned bucket = hashfunc(cache->capacity, key);
-    if (cache->hash->array[bucket] !=NULL){
+    if (cache->hash->array[bucket] !=NULL && cache->hash->array[bucket]->key == key){
         return bucket; 
     }
     else {
@@ -112,21 +115,21 @@ void freeQNode(QNode* qnode);
 
 
 
-LRUCache* lRUCacheCreate(int capacity) {
-    struct LRUCache* cache = malloc(sizeof(LRUCache));
+struct LRUCache* lRUCacheCreate(int capacity) {
+    struct LRUCache* cache = malloc(sizeof(struct LRUCache));
     cache->capacity = capacity;
     cache->queue = createQueue(capacity);
     cache->hash = createHash(capacity);
     return cache;
-} // THIS IS WHERE THE ERROR HAPPENS
+} // THIS IS WHERE THE ERROR HAPPEN(ED) -- fixed- (sort of), but not understood
 
 int lRUCacheGet(struct LRUCache* obj, int key) {
   unsigned location = searchCache(obj, key);
-    if (location >=0){ // found
-        struct QNode* tempNode = obj->hash->array[location]; // found in hash
+    if (location >=0){ // found, else searchCache returns -1
+        struct QNode* tempNode = obj->hash->array[location]; // found in hash 
         int tempData = tempNode->data; // to be return after queue reordering
-        if (obj->queue->front == tempNode){ // if head, we're already good
-            return tempData; // successful cache get
+        if (obj->queue->front == tempNode){ // if head
+            return tempData; // success
         } 
         else if (obj->queue->rear == tempNode){ // rear
             obj->queue->rear = tempNode->prev;
@@ -135,9 +138,9 @@ int lRUCacheGet(struct LRUCache* obj, int key) {
             tempNode->next = obj->queue->front;
             obj->queue->front = tempNode;
         }
-        else{ // base case
+        else{ // node somewhere in middle
             // Qnode* t = tempNode->prev; // not needed bc we're not changing tempNode itself
-            tempNode->next->prev = tempNode->prev;
+            tempNode->next->prev = tempNode->prev; // tempnode->next could null
             tempNode->prev->next = tempNode->next;
             tempNode->prev = NULL;
             tempNode->next = obj->queue->front;
@@ -155,7 +158,7 @@ void lRUCachePut(struct LRUCache* obj, int key, int value) {
     if (obj->queue->count == obj->capacity){ // at limit, must dequeue // TRY WITH JUST ENQUEUE ONCE WORKING
         deQueue(obj->queue); // does the -- operation
     }
-    Enqueue(obj->queue, obj->hash, value, bucket); // also adds to hash-- and handles situations and increments/decrmenets
+    Enqueue(obj->queue, obj->hash, value, bucket, key); // also adds to hash-- and handles situations and increments/decrmenets
 }
 
 void lRUCacheFree(struct LRUCache* obj) {
@@ -176,12 +179,11 @@ void lRUCacheFree(struct LRUCache* obj) {
 */
 
 void freeQueue(struct Queue* queue){
-    struct QNode* n = queue->front, *next;
-    while (n != NULL){
-        next = n->next;
-        printf("address of n %p", n);
-        free(n);
-        n = next;
+    struct QNode* curr = queue->front;
+    while (curr){
+        QNode* tmp = curr;
+        curr = curr->next;
+        free(tmp);
     }
     free(queue);
 }
