@@ -7,7 +7,7 @@ typedef struct QNode {
 
 typedef struct Queue{
     unsigned count;
-    unsigned numberOfFrames;
+    unsigned capacity;
     QNode *front, *rear;    
 } Queue;
 
@@ -30,10 +30,10 @@ struct QNode* newQNode(unsigned bucket){
     return temp;
 }
 
-struct Queue* createQueue(int numberOfFrames){
+struct Queue* createQueue(int capacity){
     struct Queue *queue = malloc(sizeof(struct Queue));
     queue->count = 0;
-    queue->numberOfFrames = numberOfFrames;
+    queue->capacity = capacity;
     queue->front = queue->rear = NULL;
     return queue;
 }
@@ -48,35 +48,48 @@ struct Hash* createHash(int capacity){
     return hash;
 }
 
-int AreAllFramesFull(Queue* queue){
-    return queue->count == queue->numberOfFrames; // size of queue determines size of cache
-}
-
-int isQueueEmpty(Queue* queue){
-    return queue->rear == NULL;
-}
-
 void deQueue(Queue* queue){ // we could have return QNode but how would affect memory mgmt?  
-    if (isQueueEmpty(queue)){
+    if (queue->rear == NULL){
+        // nothing to do
         return;
     }
-    if (queue->front == queue->rear){ // LL of one
+    if (queue->front == queue->rear){ // LL of one, as long as front and rear are properly pointed
         queue->front = NULL;
+        queue->rear = NULL;
+        queue->count--;
+        return;
     }
-    QNode* temp = queue->rear;
-    queue->rear = queue->rear->prev;
+    // QNode* temp = queue->rear;
+    // LL two or more
+    queue->rear = queue->rear->prev; // could be front if size = 2. That's fine 
     if (queue->rear){
-        queue->rear->next = NULL;
+        queue->rear->next = NULL; // orphan the remaining, no need for memory freeing until it runs
     }
     queue->count--;
+    return;
     // free(temp); // This creates an AddressSanitizer error heap-use-after-free.
+}
 
+void dehash(Queue* queue, Hash* hash, unsigned bucket, int key){ // sets hash to null. Doesn't free
+    unsigned test_bucket = hashfunc(hash->capacity, key); // should be same as passed in. for checking
+    if (test_bucket != bucket){
+        printf("Warning, hash values coming out differently in dehash function\n");
+    }
+    if (hash->array[bucket]){ // we have to be certain this is right bucket adjusted for collision
+        if (hash->array[bucket]->key == key){ // double check for debug
+            // QNode* tmp = hash->array[bucket]; 
+            hash->array[bucket] = NULL;
+            // free(tmp);
+        }
+        else printf("entry found in hash but keys don't match. No action taken.\n");
+        return;
+    }
 }
 
 void Enqueue(Queue* queue, Hash* hash, int value, unsigned bucket, int key){ // also adds to hash
-    if (AreAllFramesFull(queue)){
-        hash->array[queue->rear->bucket] = NULL;
+    if (queue->count == queue->numberOfFrames){ // if it's full, must dequeue
         deQueue(queue); // goodbye
+        hash->array[queue->rear->bucket] = NULL;
     }
     QNode* temp = newQNode(bucket);
     temp->data = value; // obviously have to put the value in there
