@@ -113,14 +113,14 @@ void freeQNode(QNode* qnode);
 
 
 LRUCache* lRUCacheCreate(int capacity) {
-    struct LRUCache* cache= malloc(sizeof(LRUCache));
+    struct LRUCache* cache = malloc(sizeof(LRUCache));
     cache->capacity = capacity;
     cache->queue = createQueue(capacity);
     cache->hash = createHash(capacity);
     return cache;
-}
+} // THIS IS WHERE THE ERROR HAPPENS
 
-int lRUCacheGet(LRUCache* obj, int key) {
+int lRUCacheGet(struct LRUCache* obj, int key) {
   unsigned location = searchCache(obj, key);
     if (location >=0){ // found
         struct QNode* tempNode = obj->hash->array[location]; // found in hash
@@ -150,7 +150,7 @@ int lRUCacheGet(LRUCache* obj, int key) {
     }
 }
 
-void lRUCachePut(LRUCache* obj, int key, int value) {
+void lRUCachePut(struct LRUCache* obj, int key, int value) {
     unsigned bucket = hashfunc(obj->capacity, key);
     if (obj->queue->count == obj->capacity){ // at limit, must dequeue // TRY WITH JUST ENQUEUE ONCE WORKING
         deQueue(obj->queue); // does the -- operation
@@ -162,6 +162,7 @@ void lRUCacheFree(struct LRUCache* obj) {
     freeQueue(obj->queue);
     freeHash(obj->hash);
     free(obj);
+    return;
 }
 
 /**
@@ -178,6 +179,7 @@ void freeQueue(struct Queue* queue){
     struct QNode* n = queue->front, *next;
     while (n != NULL){
         next = n->next;
+        printf("address of n %p", n);
         free(n);
         n = next;
     }
