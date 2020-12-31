@@ -145,16 +145,20 @@ void Enqueue(struct LRUCache *cache, struct Queue *queue, struct Hash *hash, int
   { // if brand new node. bucket state already verified matching keys
     // create new node
     QNode *temp = newQNode(0);
-    temp->data = value;                      // obviously have to put the value in there
-    temp->key = key;                         // needed for handling hash collisions
-    temp->bucket = getGoodBucket(hash, key); // Get it a bucket
-    temp->prev = NULL;                       // because it will go at head
+    temp->data = value; // obviously have to put the value in there
+    temp->key = key;    // needed for handling hash collisions
+    int goodBucket = getGoodBucket(hash, key);
+    printf("GoodBucket to hash index on %d\n", goodBucket);
+    temp->bucket = goodBucket; // Get it a bucket
+    temp->prev = NULL;         // because it will go at head
 
     // attach node
     if (queue->rear == NULL)
     { // should mean queue is empty but double check
       if (queue->front != NULL)
+      {
         printf("Rear null but head not, error\n");
+      }
       queue->rear = temp;
       queue->front = temp;
     }
@@ -164,7 +168,7 @@ void Enqueue(struct LRUCache *cache, struct Queue *queue, struct Hash *hash, int
       queue->front->next = queue->rear;
       // should already be pointing to
     }
-    hash->array[bucket] = temp; // pass to hash
+    hash->array[goodBucket] = temp; // pass to hash
     queue->count++;
     return;
   }
@@ -318,7 +322,7 @@ void printCurrentState(LRUCache *cache, char *op)
   }
   for (int i = 0; i < cache->capacity; i++)
   {
-    printf("Hashtable[%d] = %d\n", i, cache->hash->array[i]);
+    if (cache->hash->array[i] != NULL) printf("Hashtable[%d] = %d\n", i, cache->hash->array[i]->data);
   }
 }
 
