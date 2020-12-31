@@ -172,6 +172,7 @@ void EnqueueNewNode(struct LRUCache *cache, struct Queue *queue, struct Hash *ha
   printf("GoodBucket to hash index on %d\n", goodBucket);
   temp->bucket = goodBucket; // Get it a bucket
   temp->prev = NULL;         // because it will go at head
+  temp->next = queue->front;
 
   // attach node
   if (queue->rear == NULL)
@@ -186,6 +187,11 @@ void EnqueueNewNode(struct LRUCache *cache, struct Queue *queue, struct Hash *ha
     queue->front = temp;
     queue->front->next = queue->rear;
     queue->front->next->prev = queue->front;
+  }
+  else
+  { // min capacity 3
+    queue->front->prev = temp;
+    queue->front = temp;
   }
   hash->array[goodBucket] = temp; // pass to hash
   queue->count++;
@@ -330,6 +336,17 @@ int lRUCacheGet(struct LRUCache *obj, int key)
 
 void lRUCachePut(struct LRUCache *obj, int key, int value)
 {
+  int bucket = searchCache(obj, key); // already checks that key is right
+  if (bucket >= 0)
+  {
+    int existing_value = obj->hash->array[bucket]->data;
+    if (value != existing_value)
+    {
+      obj->hash->array[bucket]->data = value;
+    }
+    MoveNodeToFront(obj, obj->queue, obj->hash, value, key, bucket);
+    return;
+  }
   // unsigned bucket = hashfunc(obj->capacity, key); // gets original bucket
   printf("\nPutting key %d value %d\n", key, value);
   Enqueue(obj, obj->queue, obj->hash, value, key); // also dequeues/dehashes, adds to hash, moves to front
@@ -367,6 +384,7 @@ void printQueueData(LRUCache *cache, char *op)
   QNode *p = n->prev;
   while (n != NULL)
   {
+    printf("QC:%d ", cache->queue->capacity);
     printf("QueueNode %d data = %d  n->prev:%d, n->next:%d\n", c, n->data, n->prev != NULL, n->next != NULL);
     c++;
     n = n->next;
@@ -391,24 +409,105 @@ void printCurrentState(LRUCache *cache, char *op)
   }
 }
 
-int main(void) 
+int main(void)
 {
-  struct LRUCache *lRUCache = lRUCacheCreate(2);
-  lRUCachePut(lRUCache, 2, 1); // cache is {1=1}
-  printCurrentState(lRUCache, "put 2, 1");
-  lRUCachePut(lRUCache, 2, 2); // cache is {1=1, 2=2}
-  printCurrentState(lRUCache, "put 2, 2");
-  lRUCacheGet(lRUCache, 2); // return 1
-  printCurrentState(lRUCache, "get 2");
-  lRUCachePut(lRUCache, 1, 1); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
-  printCurrentState(lRUCache, "put 1 1");
-  lRUCachePut(lRUCache, 4, 1); // returns -1 (not found)
-  printCurrentState(lRUCache, "put 4 1");
-  lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-  printCurrentState(lRUCache, "get 2");
 
+  int test_data[][2] = {{10, 13}, {3, 17}, {6, 11}, {10, 5}, {9, 10}, {13}, {2, 19}, {2}, {3}, {5, 25}, {8}, {9, 22}, {5, 5}, {1, 30}, {11}, {9, 12}, {7}, {5}, {8}, {9}, {4, 30}, {9, 3}, {9}, {10}, {10}, {6, 14}, {3, 1}, {3}, {10, 11}, {8}, {2, 14}, {1}, {5}, {4}, {11, 4}, {12, 24}, {5, 18}, {13}, {7, 23}, {8}, {12}, {3, 27}, {2, 12}, {5}, {2, 9}, {13, 4}, {8, 18}, {1, 7}, {6}, {9, 29}, {8, 21}, {5}, {6, 30}, {1, 12}, {10}, {4, 15}, {7, 22}, {11, 26}, {8, 17}, {9, 29}, {5}, {3, 4}, {11, 30}, {12}, {4, 29}, {3}, {9}, {6}, {3, 4}, {1}, {10}, {3, 29}, {10, 28}, {1, 20}, {11, 13}, {3}, {3, 12}, {3, 8}, {10, 9}, {3, 26}, {8}, {7}, {5}, {13, 17}, {2, 27}, {11, 15}, {12}, {9, 19}, {2, 15}, {3, 16}, {1}, {12, 17}, {9, 1}, {6, 19}, {4}, {5}, {5}, {8, 1}, {11, 7}, {5, 2}, {9, 28}, {1}, {2, 2}, {7, 4}, {4, 22}, {7, 24}, {9, 26}, {13, 28}, {11, 26}};
+
+  struct LRUCache *lRUCache = lRUCacheCreate(10);
+
+  int length = sizeof(test_data) / sizeof test_data[0];
+  printf("Length of test data is %d\n", length);
+  char *string_to_print = malloc(sizeof(char) * 1000);
+  for (int i = 0; i < length; i++)
+  {
+    if (test_data[i][1] == 0) // it's a get
+    {
+      sprintf(string_to_print, "get %d", test_data[i][0]);
+      lRUCacheGet(lRUCache, test_data[i][0]);
+      printCurrentState(lRUCache, string_to_print);
+    }
+    else
+    {
+      sprintf(string_to_print, "put %d %d", test_data[i][0], test_data[i][1]);
+      lRUCachePut(lRUCache, test_data[i][0], test_data[i][1]); //
+      printCurrentState(lRUCache, string_to_print);
+    }
+  }
+  // lRUCachePut(lRUCache, 1, 1); // cache is {1=1}
+  // printCurrentState(lRUCache, "put 1, 1");
+  // lRUCachePut(lRUCache, 2, 2); // cache is {1=1, 2=2}
+  // printCurrentState(lRUCache, "put 2, 2");
+  // lRUCachePut(lRUCache, 3, 3); // return 1
+  // printCurrentState(lRUCache, "put 3 3");
+  // lRUCachePut(lRUCache, 4, 4); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
+  // printCurrentState(lRUCache, "put 4 4");
+  // lRUCacheGet(lRUCache, 4); // returns -1 (not found)
+  // printCurrentState(lRUCache, "get 4");
+  // lRUCacheGet(lRUCache, 3); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
+  // printCurrentState(lRUCache, "get 3");
+  // lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
+  // printCurrentState(lRUCache, "get 2");
+  // lRUCacheGet(lRUCache, 1); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
+  // printCurrentState(lRUCache, "get 1");
+  // lRUCachePut(lRUCache, 5, 5); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
+  // printCurrentState(lRUCache, "put 5 5");
+  // lRUCacheGet(lRUCache, 1); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
+  // printCurrentState(lRUCache, "get 1");
+  // lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
+  // printCurrentState(lRUCache, "get 2");
+  // lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
+  // printCurrentState(lRUCache, "get 3");
+  // lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
+  // printCurrentState(lRUCache, "get 4");
+  // lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
+  // printCurrentState(lRUCache, "get 5");
   return 1;
 }
+
+// [ "LRUCache", "put", "put", "put", "put", "get", "get", "get", "get", "put", "get", "get", "get", "get", "get" ]
+//     [[3], [ 1, 1 ], [ 2, 2 ], [ 3, 3 ], [ 4, 4 ], [4], [3], [2], [1], [ 5, 5 ], [1], [2], [3], [4], [5]]
+
+// int main(void) // passed
+// {
+//   struct LRUCache *lRUCache = lRUCacheCreate(2);
+//   lRUCachePut(lRUCache, 2, 1); // cache is {1=1}
+//   printCurrentState(lRUCache, "put 2, 1");
+//   lRUCachePut(lRUCache, 1, 1); // cache is {1=1, 2=2}
+//   printCurrentState(lRUCache, "put 1, 1");
+//   lRUCachePut(lRUCache, 2, 3); // return 1
+//   printCurrentState(lRUCache, "put 2 3");
+//   lRUCachePut(lRUCache, 4, 1); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
+//   printCurrentState(lRUCache, "put 4 1");
+//   lRUCacheGet(lRUCache, 1); // returns -1 (not found)
+//   printCurrentState(lRUCache, "get 1");
+//   lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
+//   printCurrentState(lRUCache, "get 2");
+
+//   return 1;
+// }
+
+// ["LRUCache","put","put","put","put","get","get"]
+// [[2],[2,1],[1,1],[2,3],[4,1],[1],[2]]
+
+// int main(void) // working
+// {
+//   struct LRUCache *lRUCache = lRUCacheCreate(2);
+//   lRUCachePut(lRUCache, 2, 1); // cache is {1=1}
+//   printCurrentState(lRUCache, "put 2, 1");
+//   lRUCachePut(lRUCache, 2, 2); // cache is {1=1, 2=2}
+//   printCurrentState(lRUCache, "put 2, 2");
+//   lRUCacheGet(lRUCache, 2); // return 1
+//   printCurrentState(lRUCache, "get 2");
+//   lRUCachePut(lRUCache, 1, 1); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
+//   printCurrentState(lRUCache, "put 1 1");
+//   lRUCachePut(lRUCache, 4, 1); // returns -1 (not found)
+//   printCurrentState(lRUCache, "put 4 1");
+//   lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
+//   printCurrentState(lRUCache, "get 2");
+
+//   return 1;
+// }
 
 // [[2,1],[2,2],[2],[1,1],[4,1],[2]]
 
@@ -433,7 +532,6 @@ int main(void)
 //   printCurrentState(lRUCache, "get 3");
 //   lRUCacheGet(lRUCache, 4); // return 4
 //   printCurrentState(lRUCache, "get 4");
-
 
 //   return 1;
 // }
