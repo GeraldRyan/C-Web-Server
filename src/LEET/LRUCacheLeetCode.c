@@ -1,7 +1,17 @@
+/**
+ * Your LRUCache struct will be instantiated and called as such:
+ * LRUCache* obj = lRUCacheCreate(capacity);
+ * int param_1 = lRUCacheGet(obj, key);
+ 
+ * lRUCachePut(obj, key, value);
+ 
+ * lRUCacheFree(obj);
+*/
+
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
-
+#define DEBUG_MODE 1
 typedef struct QNode
 {
   struct QNode *prev, *next;
@@ -66,13 +76,26 @@ int searchCache(struct LRUCache *cache, int key);
 
 void deQueue(Queue *queue)
 { // we could have return QNode but how would affect memory mgmt?
-  if (queue->rear == NULL)
+
+  if (DEBUG_MODE)
   {
-    // nothing to do
-    return;
+    QNode *n = queue->front;
+    int c = 0;
+    QNode *p = n->prev;
+    while (n != NULL)
+    {
+      printf("QueueNode %d data = %d  n->prev:%d, n->next:%d\n", c, n->data, n->prev != NULL, n->next != NULL);
+      c++;
+      n = n->next;
+    }
+    printf("next queue node is NULL\n");
+    if (p == NULL)
+      printf("Front's prev points to null\n");
   }
+  if (queue->rear == NULL)
+    return;
   if (queue->front == queue->rear)
-  { // LL of one, as long as front and rear are properly pointed
+  {
     queue->front = NULL;
     queue->rear = NULL;
     queue->count--;
@@ -80,11 +103,11 @@ void deQueue(Queue *queue)
   }
   // QNode* temp = queue->rear;
   // LL two or more
+
   queue->rear = queue->rear->prev; // could be front if size = 2. That's fine
   if (queue->rear)
-  {
     queue->rear->next = NULL; // orphan the remaining, no need for memory freeing until it runs
-  }
+
   queue->count--;
   return;
   // free(temp); // This creates an AddressSanitizer error heap-use-after-free.
@@ -102,6 +125,7 @@ void dehash(Queue *queue, Hash *hash, unsigned bucket, int key)
     if (hash->array[bucket]->key == key)
     { // double check for debug
       // QNode* tmp = hash->array[bucket];
+      printf("Goodbye to hash[%d] with data %d\n", bucket, hash->array[bucket]->data);
       hash->array[bucket] = NULL;
       // free(tmp);
     }
@@ -114,22 +138,33 @@ void dehash(Queue *queue, Hash *hash, unsigned bucket, int key)
 unsigned getGoodBucket(Hash *hash, int key)
 {
   unsigned try_bucket = hashfunc(hash->capacity, key);
+  int hc = hash->capacity;
+  printf("try bucket and key %d , %d\n", try_bucket, key);
   if (hash->array[try_bucket] == NULL)
     return try_bucket;
   unsigned original_try = try_bucket;
+  int c = 0;
   while (hash->array[try_bucket] != NULL)
   { // spot is taken
-    try_bucket = (try_bucket + 1) % hash->capacity;
-    if (try_bucket == original_try)
+    // try_bucket = ((try_bucket + 1)) % hash->capacity;  //THIS IS NOT WORKING FOR SOME REASON, STAYING AT 1 1 1 1 1 1 1 1 1 1
+    // if (try_bucket == original_try)
+    printf("Try bucket %d and original try %d\n", try_bucket, original_try);
+    try_bucket++;
+    if (try_bucket == hc)
+      try_bucket = 0;
+    if (c == hc)
     { // no space found (erroneously I think)
-      printf("No space found in hash for new node, looped through everything\n");
+      printf("Sorry no space found in hash for new node, looped through everything (but should be found as hash entry should have been dequeued\n");
+      return -1;
     }
+    c++;
   }
   return try_bucket; // hope this works no collisions.
 }
 
 void EnqueueNewNode(struct LRUCache *cache, struct Queue *queue, struct Hash *hash, int value, int key)
 {
+  // remember queue was just dequeueed
   QNode *temp = newQNode(0);
   temp->data = value; // obviously have to put the value in there
   temp->key = key;    // needed for handling hash collisions
@@ -151,7 +186,6 @@ void EnqueueNewNode(struct LRUCache *cache, struct Queue *queue, struct Hash *ha
     queue->front = temp;
     queue->front->next = queue->rear;
     queue->front->next->prev = queue->front;
-    // should already be pointing to
   }
   hash->array[goodBucket] = temp; // pass to hash
   queue->count++;
@@ -159,8 +193,9 @@ void EnqueueNewNode(struct LRUCache *cache, struct Queue *queue, struct Hash *ha
 }
 
 void MoveNodeToFront(struct LRUCache *cache, struct Queue *queue, struct Hash *hash, int value, int key, int bucket)
-{
-  if (hash->array[bucket] == queue->front)
+{                                   // can happen on get requests
+  QNode *tmp = hash->array[bucket]; // pointer to the node in question
+  if (tmp == queue->front)
   { // Already at head, don't need to do anything.
     return;
   }
@@ -170,42 +205,42 @@ void MoveNodeToFront(struct LRUCache *cache, struct Queue *queue, struct Hash *h
     printf("Q count should be 1. Queue count is %d\n", queue->count);
     return;
   }
-  else
-  { // if in hash, should(!!) also be in the queue. If not, VERY BAD. Not super easy to check
+  else // standard case
+  {    // if in hash, should(!!) also be in the queue. If not, VERY BAD. Not super easy to check
     printf("bucket is still %d and key is %d (1)\n", bucket, key);
-    QNode *tmp = hash->array[bucket]; // pointer to the node in question
     if (tmp == NULL)
-    {
       printf("QNode not found in Enqueue function bucket\n");
-    }
-    printf("hash[bucket]->data is %d\n", tmp->data);
     if (tmp->prev == NULL)
-    {
-      printf("Temp previous is null but should not be (not at head)\n");
-    }
-    // printf("Yet this prints and key is 1 %d \n", key); // this causes prior to be printed
-    tmp->prev->next = tmp->next; // next can be NULL or not null, doesn't matter
-    tmp->next->prev = tmp->prev; // now the neighbors are reassociated
+      printf("Temp previous is null but should not be (because not at head)\n");
+
+    printf("hash[bucket]->data is %d\n", tmp->data);
+
+    tmp->prev->next = tmp->next;
+    if (tmp != queue->rear)
+      tmp->next->prev = tmp->prev; // SEG FAULT if tmp is rear!!
+    if (tmp == queue->rear)
+      queue->rear = tmp->prev;
+    tmp->prev->next = tmp->next;
+    queue->front->prev = tmp;
     tmp->next = queue->front;
-    tmp->prev = NULL;   // Now the node in question is right pointed
-    queue->front = tmp; // queue front could point to queue->rear, or to an intermediary
-    return;             // queue count doesn't change. we're done? Will it work?
+    queue->front = tmp;        // queue front could point to queue->rear, or to an intermediary
+    queue->front->prev = NULL; // Now the node in question is right pointed
+    return;                    // queue count doesn't change. we're done? Will it work?
   }
   return;
 }
 
-
-
 void Enqueue(struct LRUCache *cache, struct Queue *queue, struct Hash *hash, int value, int key)
-{ 
+{
   int bucket = searchCache(cache, key); // bucket can be -1 not found or bucket where exists
   printf("Enqueuing key %d and bucket is: %d\n", key, bucket);
 
   if (queue->count == queue->capacity && bucket < 0)
   {
+    printf("Ready to dequeue rear and add new node\n");
     unsigned hashbucket = queue->rear->bucket;
     deQueue(queue);
-    dehash(queue, hash, hashbucket, key);
+    dehash(queue, hash, hashbucket, hash->array[hashbucket]->key);
   }
 
   if (bucket == -1)
@@ -219,9 +254,6 @@ void Enqueue(struct LRUCache *cache, struct Queue *queue, struct Hash *hash, int
     return;
   }
 }
-
-
-
 
 unsigned int hashfunc(unsigned capacity, int key)
 {
@@ -247,7 +279,7 @@ int searchCache(struct LRUCache *cache, int key)
         test_bucket = ((test_bucket + 1) % cache->capacity);
         if (test_bucket == original_test_bucket)
         { // back to start, avoid infinite looping
-          printf("Probed hash, object not found\n");
+          printf("Probed hash, object not found. returning -1\n");
           return -1; // returns -1
         }
         if (cache->hash->array[test_bucket]->key == key)
@@ -263,10 +295,11 @@ int searchCache(struct LRUCache *cache, int key)
   }
   return -1;
 }
-
+//Declarations
 void freeQueue(Queue *queue);
 void freeHash(Hash *hash);
 void freeQNode(QNode *qnode);
+void printQueueData(LRUCache *cache, char *op);
 
 struct LRUCache *lRUCacheCreate(int capacity)
 {
@@ -298,7 +331,7 @@ int lRUCacheGet(struct LRUCache *obj, int key)
 void lRUCachePut(struct LRUCache *obj, int key, int value)
 {
   // unsigned bucket = hashfunc(obj->capacity, key); // gets original bucket
-  printf("Putting key %d value %d\n", key, value);
+  printf("\nPutting key %d value %d\n", key, value);
   Enqueue(obj, obj->queue, obj->hash, value, key); // also dequeues/dehashes, adds to hash, moves to front
 }
 
@@ -309,16 +342,6 @@ void lRUCacheFree(struct LRUCache *obj)
   free(obj);
   return;
 }
-
-/**
- * Your LRUCache struct will be instantiated and called as such:
- * LRUCache* obj = lRUCacheCreate(capacity);
- * int param_1 = lRUCacheGet(obj, key);
- 
- * lRUCachePut(obj, key, value);
- 
- * lRUCacheFree(obj);
-*/
 
 void freeQueue(struct Queue *queue)
 {
@@ -337,10 +360,8 @@ void freeHash(Hash *hash)
 }
 void freeQNode(QNode *qnode);
 
-void printCurrentState(LRUCache *cache, char *op)
+void printQueueData(LRUCache *cache, char *op)
 {
-  printf("\nCURRENT STATE after %s::::::::::\n", op);
-  printf("cache has capacity of %d\n", cache->capacity);
   QNode *n = cache->queue->front;
   int c = 0;
   QNode *p = n->prev;
@@ -350,11 +371,19 @@ void printCurrentState(LRUCache *cache, char *op)
     c++;
     n = n->next;
   }
-  printf("next queue node is NULL\n");
   if (p == NULL)
-  {
-    printf("Front's prev points to null\n");
-  }
+    printf("Front's prev points to null. ");
+  printf("next queue node is NULL\n");
+  QNode *r = cache->queue->rear;
+  if (r)
+    printf("Queue Rear exists:%d and its data: %d\n", r != NULL, r->data);
+}
+
+void printCurrentState(LRUCache *cache, char *op)
+{
+  printf("\nCURRENT STATE after %s::::::::::\n", op);
+  printf("cache has capacity of %d\n", cache->capacity);
+  printQueueData(cache, op);
   for (int i = 0; i < cache->capacity; i++)
   {
     if (cache->hash->array[i] != NULL)
@@ -362,26 +391,49 @@ void printCurrentState(LRUCache *cache, char *op)
   }
 }
 
-int main(void)
+int main(void) 
 {
   struct LRUCache *lRUCache = lRUCacheCreate(2);
-  lRUCachePut(lRUCache, 1, 1); // cache is {1=1}
-  printCurrentState(lRUCache, "put 1, 1");
+  lRUCachePut(lRUCache, 2, 1); // cache is {1=1}
+  printCurrentState(lRUCache, "put 2, 1");
   lRUCachePut(lRUCache, 2, 2); // cache is {1=1, 2=2}
   printCurrentState(lRUCache, "put 2, 2");
-  lRUCacheGet(lRUCache, 1); // return 1
-  printCurrentState(lRUCache, "get 1");
-  lRUCachePut(lRUCache, 3, 3); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
-  printCurrentState(lRUCache, "put 3 3");
-  lRUCacheGet(lRUCache, 2); // returns -1 (not found)
+  lRUCacheGet(lRUCache, 2); // return 1
   printCurrentState(lRUCache, "get 2");
-  lRUCachePut(lRUCache, 4, 4); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-  printCurrentState(lRUCache, "put 4 4");
-  lRUCacheGet(lRUCache, 1); // return -1 (not found)
-  printCurrentState(lRUCache, "get 1");
-  lRUCacheGet(lRUCache, 3); // return 3
-  printCurrentState(lRUCache, "get 3");
-  lRUCacheGet(lRUCache, 4); // return 4
+  lRUCachePut(lRUCache, 1, 1); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
+  printCurrentState(lRUCache, "put 1 1");
+  lRUCachePut(lRUCache, 4, 1); // returns -1 (not found)
+  printCurrentState(lRUCache, "put 4 1");
+  lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
+  printCurrentState(lRUCache, "get 2");
 
   return 1;
 }
+
+// [[2,1],[2,2],[2],[1,1],[4,1],[2]]
+
+// int main(void) // works
+// {
+//   struct LRUCache *lRUCache = lRUCacheCreate(2);
+//   lRUCachePut(lRUCache, 1, 1); // cache is {1=1}
+//   printCurrentState(lRUCache, "put 1, 1");
+//   lRUCachePut(lRUCache, 2, 2); // cache is {1=1, 2=2}
+//   printCurrentState(lRUCache, "put 2, 2");
+//   lRUCacheGet(lRUCache, 1); // return 1
+//   printCurrentState(lRUCache, "get 1");
+//   lRUCachePut(lRUCache, 3, 3); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
+//   printCurrentState(lRUCache, "put 3 3");
+//   lRUCacheGet(lRUCache, 2); // returns -1 (not found)
+//   printCurrentState(lRUCache, "get 2");
+//   lRUCachePut(lRUCache, 4, 4); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
+//   printCurrentState(lRUCache, "put 4 4");
+//   lRUCacheGet(lRUCache, 1); // return -1 (not found)
+//   printCurrentState(lRUCache, "get 1");
+//   lRUCacheGet(lRUCache, 3); // return 3
+//   printCurrentState(lRUCache, "get 3");
+//   lRUCacheGet(lRUCache, 4); // return 4
+//   printCurrentState(lRUCache, "get 4");
+
+
+//   return 1;
+// }
