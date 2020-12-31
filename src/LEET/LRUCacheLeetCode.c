@@ -128,74 +128,100 @@ unsigned getGoodBucket(Hash *hash, int key)
   return try_bucket; // hope this works no collisions.
 }
 
+void EnqueueNewNode(struct LRUCache *cache, struct Queue *queue, struct Hash *hash, int value, int key)
+{
+  QNode *temp = newQNode(0);
+  temp->data = value; // obviously have to put the value in there
+  temp->key = key;    // needed for handling hash collisions
+  int goodBucket = getGoodBucket(hash, key);
+  printf("GoodBucket to hash index on %d\n", goodBucket);
+  temp->bucket = goodBucket; // Get it a bucket
+  temp->prev = NULL;         // because it will go at head
+
+  // attach node
+  if (queue->rear == NULL)
+  { // should mean queue is empty but double check
+    if (queue->front != NULL)
+      printf("Rear null but head not, error\n");
+    queue->rear = temp;
+    queue->front = temp;
+  }
+  else if (queue->front == queue->rear)
+  {
+    queue->front = temp;
+    queue->front->next = queue->rear;
+    queue->front->next->prev = queue->front;
+    // should already be pointing to
+  }
+  hash->array[goodBucket] = temp; // pass to hash
+  queue->count++;
+  return;
+}
+
+void MoveNodeToFront(struct LRUCache *cache, struct Queue *queue, struct Hash *hash, int value, int key, int bucket)
+{
+  if (hash->array[bucket] == queue->front)
+  { // Already at head, don't need to do anything.
+    return;
+  }
+  else if (queue->front == queue->rear)
+  { // shouldn't be triggered based on above condition.
+    printf("This should never run. Should be handled by the above condition. Implying error\n");
+    printf("Q count should be 1. Queue count is %d\n", queue->count);
+    return;
+  }
+  else
+  { // if in hash, should(!!) also be in the queue. If not, VERY BAD. Not super easy to check
+    printf("bucket is still %d and key is %d (1)\n", bucket, key);
+    QNode *tmp = hash->array[bucket]; // pointer to the node in question
+    if (tmp == NULL)
+    {
+      printf("QNode not found in Enqueue function bucket\n");
+    }
+    printf("hash[bucket]->data is %d\n", tmp->data);
+    if (tmp->prev == NULL)
+    {
+      printf("Temp previous is null but should not be (not at head)\n");
+    }
+    // printf("Yet this prints and key is 1 %d \n", key); // this causes prior to be printed
+    tmp->prev->next = tmp->next; // next can be NULL or not null, doesn't matter
+    tmp->next->prev = tmp->prev; // now the neighbors are reassociated
+    tmp->next = queue->front;
+    tmp->prev = NULL;   // Now the node in question is right pointed
+    queue->front = tmp; // queue front could point to queue->rear, or to an intermediary
+    return;             // queue count doesn't change. we're done? Will it work?
+  }
+  return;
+}
+
+
+
 void Enqueue(struct LRUCache *cache, struct Queue *queue, struct Hash *hash, int value, int key)
-{ // also adds to hash
-  // check if exists already in cache
+{ 
   int bucket = searchCache(cache, key); // bucket can be -1 not found or bucket where exists
-  printf("Enqueuing key %d\nbucket is: %d\n", key, bucket);
-  // dequeue if full
+  printf("Enqueuing key %d and bucket is: %d\n", key, bucket);
+
   if (queue->count == queue->capacity && bucket < 0)
-  {                                            // if full and new one needs enter
-    unsigned hashbucket = queue->rear->bucket; // order of operation important
-    deQueue(queue);                            // if empty, no action, if front=rear set both null, owise remove rear
+  {
+    unsigned hashbucket = queue->rear->bucket;
+    deQueue(queue);
     dehash(queue, hash, hashbucket, key);
   }
 
   if (bucket == -1)
-  { // if brand new node. bucket state already verified matching keys
-    // create new node
-    QNode *temp = newQNode(0);
-    temp->data = value; // obviously have to put the value in there
-    temp->key = key;    // needed for handling hash collisions
-    int goodBucket = getGoodBucket(hash, key);
-    printf("GoodBucket to hash index on %d\n", goodBucket);
-    temp->bucket = goodBucket; // Get it a bucket
-    temp->prev = NULL;         // because it will go at head
-
-    // attach node
-    if (queue->rear == NULL)
-    { // should mean queue is empty but double check
-      if (queue->front != NULL)
-      {
-        printf("Rear null but head not, error\n");
-      }
-      queue->rear = temp;
-      queue->front = temp;
-    }
-    else if (queue->front == queue->rear)
-    {
-      queue->front = temp;
-      queue->front->next = queue->rear;
-      // should already be pointing to
-    }
-    hash->array[goodBucket] = temp; // pass to hash
-    queue->count++;
+  {
+    EnqueueNewNode(cache, queue, hash, value, key);
     return;
   }
   else if (bucket >= 0)
   { // explicitly double checked, existing in cache
-    if (hash->array[bucket] == queue->front)
-    { // Already at head, don't need to do anything.
-      return;
-    }
-    else if (queue->front == queue->rear)
-    { // shouldn't be triggered based on above condition.
-      printf("This should never run. Should be handled by the above condition. Implying error\n");
-      printf("Q count should be 1. Queue count is %d\n", queue->count);
-      return;
-    }
-    else
-    {                                   // if in hash, should(!!) also be in the queue. If not, VERY BAD. Not super easy to check
-      QNode *tmp = hash->array[bucket]; // pointer to the node in question
-      tmp->prev->next = tmp->next;      // next can be NULL or not null, doesn't matter
-      tmp->next->prev = tmp->prev;      // now the neighbors are reassociated
-      tmp->next = queue->front;
-      tmp->prev = NULL;   // Now the node in question is right pointed
-      queue->front = tmp; // queue front could point to queue->rear, or to an intermediary
-      return;             // queue count doesn't change. we're done? Will it work?
-    }
+    MoveNodeToFront(cache, queue, hash, value, key, bucket);
+    return;
   }
 }
+
+
+
 
 unsigned int hashfunc(unsigned capacity, int key)
 {
@@ -253,9 +279,11 @@ struct LRUCache *lRUCacheCreate(int capacity)
 
 int lRUCacheGet(struct LRUCache *obj, int key)
 {
+  printf("\nGetting key %d\n", key);
   int location = searchCache(obj, key);
   if (location >= 0)
-  {                                                      // found, else searchCache returns -1
+  { // found, else searchCache returns -1
+    // printf("location found at %d\n", location);  // PRINTF
     struct QNode *tempNode = obj->hash->array[location]; // found in hash  SEG FAULT HERE!!
     int tempData = tempNode->data;                       // Preserve Data before enqeueing
     Enqueue(obj, obj->queue, obj->hash, tempData, key);  // TODO redundantly recalculates hash. Should be separate funtion "reorder" or "move_to_head"?
@@ -270,6 +298,7 @@ int lRUCacheGet(struct LRUCache *obj, int key)
 void lRUCachePut(struct LRUCache *obj, int key, int value)
 {
   // unsigned bucket = hashfunc(obj->capacity, key); // gets original bucket
+  printf("Putting key %d value %d\n", key, value);
   Enqueue(obj, obj->queue, obj->hash, value, key); // also dequeues/dehashes, adds to hash, moves to front
 }
 
@@ -310,19 +339,26 @@ void freeQNode(QNode *qnode);
 
 void printCurrentState(LRUCache *cache, char *op)
 {
-  printf("CURRENT STATE after %s::::::::::\n\n", op);
+  printf("\nCURRENT STATE after %s::::::::::\n", op);
   printf("cache has capacity of %d\n", cache->capacity);
   QNode *n = cache->queue->front;
   int c = 0;
+  QNode *p = n->prev;
   while (n != NULL)
   {
-    printf("QueueNode %d data = %d\n", c, n->data);
+    printf("QueueNode %d data = %d  n->prev:%d, n->next:%d\n", c, n->data, n->prev != NULL, n->next != NULL);
     c++;
     n = n->next;
   }
+  printf("next queue node is NULL\n");
+  if (p == NULL)
+  {
+    printf("Front's prev points to null\n");
+  }
   for (int i = 0; i < cache->capacity; i++)
   {
-    if (cache->hash->array[i] != NULL) printf("Hashtable[%d] = %d\n", i, cache->hash->array[i]->data);
+    if (cache->hash->array[i] != NULL)
+      printf("Hashtable[%d] = %d\n", i, cache->hash->array[i]->data);
   }
 }
 
