@@ -11,7 +11,11 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include "data.h"
 #define DEBUG_MODE 1
+#define REALLY_DEBUG 0
+#define test_data external_data
+
 typedef struct QNode
 {
   struct QNode *prev, *next;
@@ -84,13 +88,16 @@ void deQueue(Queue *queue)
     QNode *p = n->prev;
     while (n != NULL)
     {
-      printf("QueueNode %d data = %d  n->prev:%d, n->next:%d\n", c, n->data, n->prev != NULL, n->next != NULL);
+      if (REALLY_DEBUG)
+        printf("QueueNode %d data = %d  n->prev:%d, n->next:%d\n", c, n->data, n->prev != NULL, n->next != NULL);
       c++;
       n = n->next;
     }
-    printf("next queue node is NULL\n");
+    if (REALLY_DEBUG)
+      printf("next queue node is NULL\n");
     if (p == NULL)
-      printf("Front's prev points to null\n");
+      if (REALLY_DEBUG)
+        printf("Front's prev points to null\n");
   }
   if (queue->rear == NULL)
     return;
@@ -118,18 +125,20 @@ void dehash(Queue *queue, Hash *hash, unsigned bucket, int key)
   unsigned test_bucket = hashfunc(hash->capacity, key); // should be same as passed in. for checking
   if (test_bucket != bucket)
   {
-    printf("Warning, hash values coming out differently in dehash function\n");
+    if (REALLY_DEBUG)
+      printf("Warning, hash values coming out differently in dehash function\n");
   }
   if (hash->array[bucket])
   { // we have to be certain this is right bucket adjusted for collision
     if (hash->array[bucket]->key == key)
     { // double check for debug
       // QNode* tmp = hash->array[bucket];
-      printf("Goodbye to hash[%d] with data %d\n", bucket, hash->array[bucket]->data);
+      if (REALLY_DEBUG)
+        printf("Goodbye to hash[%d] with data %d\n", bucket, hash->array[bucket]->data);
       hash->array[bucket] = NULL;
       // free(tmp);
     }
-    else
+    else if (REALLY_DEBUG)
       printf("entry found in hash but keys don't match. No action taken.\n");
     return;
   }
@@ -139,7 +148,8 @@ unsigned getGoodBucket(Hash *hash, int key)
 {
   unsigned try_bucket = hashfunc(hash->capacity, key);
   int hc = hash->capacity;
-  printf("try bucket and key %d , %d\n", try_bucket, key);
+  if (REALLY_DEBUG)
+    printf("try bucket and key %d , %d\n", try_bucket, key);
   if (hash->array[try_bucket] == NULL)
     return try_bucket;
   unsigned original_try = try_bucket;
@@ -148,13 +158,15 @@ unsigned getGoodBucket(Hash *hash, int key)
   { // spot is taken
     // try_bucket = ((try_bucket + 1)) % hash->capacity;  //THIS IS NOT WORKING FOR SOME REASON, STAYING AT 1 1 1 1 1 1 1 1 1 1
     // if (try_bucket == original_try)
-    printf("Try bucket %d and original try %d\n", try_bucket, original_try);
+    if (REALLY_DEBUG)
+      printf("Try bucket %d and original try %d\n", try_bucket, original_try);
     try_bucket++;
     if (try_bucket == hc)
       try_bucket = 0;
     if (c == hc)
     { // no space found (erroneously I think)
-      printf("Sorry no space found in hash for new node, looped through everything (but should be found as hash entry should have been dequeued\n");
+      if (REALLY_DEBUG)
+        printf("Sorry no space found in hash for new node, looped through everything (but should be found as hash entry should have been dequeued\n");
       return -1;
     }
     c++;
@@ -169,7 +181,8 @@ void EnqueueNewNode(struct LRUCache *cache, struct Queue *queue, struct Hash *ha
   temp->data = value; // obviously have to put the value in there
   temp->key = key;    // needed for handling hash collisions
   int goodBucket = getGoodBucket(hash, key);
-  printf("GoodBucket to hash index on %d\n", goodBucket);
+  if (REALLY_DEBUG)
+    printf("GoodBucket to hash index on %d\n", goodBucket);
   temp->bucket = goodBucket; // Get it a bucket
   temp->prev = NULL;         // because it will go at head
   temp->next = queue->front;
@@ -178,7 +191,8 @@ void EnqueueNewNode(struct LRUCache *cache, struct Queue *queue, struct Hash *ha
   if (queue->rear == NULL)
   { // should mean queue is empty but double check
     if (queue->front != NULL)
-      printf("Rear null but head not, error\n");
+      if (REALLY_DEBUG)
+        printf("Rear null but head not, error\n");
     queue->rear = temp;
     queue->front = temp;
   }
@@ -207,19 +221,25 @@ void MoveNodeToFront(struct LRUCache *cache, struct Queue *queue, struct Hash *h
   }
   else if (queue->front == queue->rear)
   { // shouldn't be triggered based on above condition.
-    printf("This should never run. Should be handled by the above condition. Implying error\n");
-    printf("Q count should be 1. Queue count is %d\n", queue->count);
+    if (REALLY_DEBUG)
+      printf("This should never run. Should be handled by the above condition. Implying error\n");
+    if (REALLY_DEBUG)
+      printf("Q count should be 1. Queue count is %d\n", queue->count);
     return;
   }
   else // standard case
   {    // if in hash, should(!!) also be in the queue. If not, VERY BAD. Not super easy to check
-    printf("bucket is still %d and key is %d (1)\n", bucket, key);
+    if (REALLY_DEBUG)
+      printf("bucket is still %d and key is %d (1)\n", bucket, key);
     if (tmp == NULL)
-      printf("QNode not found in Enqueue function bucket\n");
+      if (REALLY_DEBUG)
+        printf("QNode not found in Enqueue function bucket\n");
     if (tmp->prev == NULL)
-      printf("Temp previous is null but should not be (because not at head)\n");
+      if (REALLY_DEBUG)
+        printf("Temp previous is null but should not be (because not at head)\n");
 
-    printf("hash[bucket]->data is %d\n", tmp->data);
+    if (REALLY_DEBUG)
+      printf("hash[bucket]->data is %d\n", tmp->data);
 
     tmp->prev->next = tmp->next;
     if (tmp != queue->rear)
@@ -239,11 +259,12 @@ void MoveNodeToFront(struct LRUCache *cache, struct Queue *queue, struct Hash *h
 void Enqueue(struct LRUCache *cache, struct Queue *queue, struct Hash *hash, int value, int key)
 {
   int bucket = searchCache(cache, key); // bucket can be -1 not found or bucket where exists
-  printf("Enqueuing key %d and bucket is: %d\n", key, bucket);
+  if(REALLY_DEBUG) printf("Enqueuing key %d and bucket is: %d\n", key, bucket);
 
   if (queue->count == queue->capacity && bucket < 0)
   {
-    printf("Ready to dequeue rear and add new node\n");
+    if (REALLY_DEBUG)
+      printf("Ready to dequeue rear and add new node\n");
     unsigned hashbucket = queue->rear->bucket;
     deQueue(queue);
     dehash(queue, hash, hashbucket, hash->array[hashbucket]->key);
@@ -271,6 +292,8 @@ int searchCache(struct LRUCache *cache, int key)
 {
   // look in hash for item of "key"; double check key=key in case of collision
   unsigned test_bucket = hashfunc(cache->capacity, key);
+  if (REALLY_DEBUG)
+    printf("test bucket %d\n ", test_bucket); // 9
   if (cache->hash->array[test_bucket] != NULL)
   {
     if (cache->hash->array[test_bucket]->key == key)
@@ -279,19 +302,19 @@ int searchCache(struct LRUCache *cache, int key)
     }
     else
     { // linear probe time
+      int cap = cache->capacity;
       unsigned original_test_bucket = test_bucket;
       while (cache->hash->array[test_bucket] != NULL)
       {
-        test_bucket = ((test_bucket + 1) % cache->capacity);
+        test_bucket = ((test_bucket + 1) % cap);
         if (test_bucket == original_test_bucket)
         { // back to start, avoid infinite looping
-          printf("Probed hash, object not found. returning -1\n");
+          if (REALLY_DEBUG)
+            printf("Probed hash, object not found. returning -1\n");
           return -1; // returns -1
         }
-        if (cache->hash->array[test_bucket]->key == key)
-        {                     // found our guy via linear probing
-          return test_bucket; // returns adjusted bucket
-        }
+        if (cache->hash->array[test_bucket] != NULL && cache->hash->array[test_bucket]->key == key)
+          return test_bucket;
       }
     }
   }
@@ -318,7 +341,8 @@ struct LRUCache *lRUCacheCreate(int capacity)
 
 int lRUCacheGet(struct LRUCache *obj, int key)
 {
-  printf("\nGetting key %d\n", key);
+  if (REALLY_DEBUG)
+    printf("\nGetting key %d\n", key);
   int location = searchCache(obj, key);
   if (location >= 0)
   { // found, else searchCache returns -1
@@ -348,7 +372,8 @@ void lRUCachePut(struct LRUCache *obj, int key, int value)
     return;
   }
   // unsigned bucket = hashfunc(obj->capacity, key); // gets original bucket
-  printf("\nPutting key %d value %d\n", key, value);
+  if (REALLY_DEBUG)
+    printf("\nPutting key %d value %d\n", key, value);
   Enqueue(obj, obj->queue, obj->hash, value, key); // also dequeues/dehashes, adds to hash, moves to front
 }
 
@@ -385,7 +410,7 @@ void printQueueData(LRUCache *cache, char *op)
   while (n != NULL)
   {
     printf("QC:%d ", cache->queue->capacity);
-    printf("QueueNode %d data = %d  n->prev:%d, n->next:%d\n", c, n->data, n->prev != NULL, n->next != NULL);
+    printf("QueueNode %d k:%d data = %d  n->prev:%d, n->next:%d\n", c, n->key, n->data, n->prev != NULL, n->next != NULL);
     c++;
     n = n->next;
   }
@@ -399,27 +424,31 @@ void printQueueData(LRUCache *cache, char *op)
 
 void printCurrentState(LRUCache *cache, char *op)
 {
-  printf("\nCURRENT STATE after %s::::::::::\n", op);
-  printf("cache has capacity of %d\n", cache->capacity);
-  printQueueData(cache, op);
-  for (int i = 0; i < cache->capacity; i++)
+  if (DEBUG_MODE)
   {
-    if (cache->hash->array[i] != NULL)
-      printf("Hashtable[%d] = %d\n", i, cache->hash->array[i]->data);
+    printf("\nCURRENT STATE after %s::::::::::\n", op);
+    printf("cache has capacity of %d\n", cache->capacity);
+    printQueueData(cache, op);
+    for (int i = 0; i < cache->capacity; i++)
+    {
+      if (cache->hash->array[i] != NULL)
+        printf("Hashtable[%d] = %d\n", i, cache->hash->array[i]->data);
+    }
   }
 }
 
 int main(void)
 {
+  printf("Data from other file %d %d %d %d %d %d \n\n", external_data[0][0],external_data[1][0],external_data[1][1],external_data[2][0],external_data[2][1],external_data[3][0]);
 
-  int test_data[][2] = {{10, 13}, {3, 17}, {6, 11}, {10, 5}, {9, 10}, {13}, {2, 19}, {2}, {3}, {5, 25}, {8}, {9, 22}, {5, 5}, {1, 30}, {11}, {9, 12}, {7}, {5}, {8}, {9}, {4, 30}, {9, 3}, {9}, {10}, {10}, {6, 14}, {3, 1}, {3}, {10, 11}, {8}, {2, 14}, {1}, {5}, {4}, {11, 4}, {12, 24}, {5, 18}, {13}, {7, 23}, {8}, {12}, {3, 27}, {2, 12}, {5}, {2, 9}, {13, 4}, {8, 18}, {1, 7}, {6}, {9, 29}, {8, 21}, {5}, {6, 30}, {1, 12}, {10}, {4, 15}, {7, 22}, {11, 26}, {8, 17}, {9, 29}, {5}, {3, 4}, {11, 30}, {12}, {4, 29}, {3}, {9}, {6}, {3, 4}, {1}, {10}, {3, 29}, {10, 28}, {1, 20}, {11, 13}, {3}, {3, 12}, {3, 8}, {10, 9}, {3, 26}, {8}, {7}, {5}, {13, 17}, {2, 27}, {11, 15}, {12}, {9, 19}, {2, 15}, {3, 16}, {1}, {12, 17}, {9, 1}, {6, 19}, {4}, {5}, {5}, {8, 1}, {11, 7}, {5, 2}, {9, 28}, {1}, {2, 2}, {7, 4}, {4, 22}, {7, 24}, {9, 26}, {13, 28}, {11, 26}};
+  // int test_data[][2] = {{10, 13}, {3, 17}, {6, 11}, {10, 5}, {9, 10}, {13}, {2, 19}, {2}, {3}, {5, 25}, {8}, {9, 22}, {5, 5}, {1, 30}, {11}, {9, 12}, {7}, {5}, {8}, {9}, {4, 30}, {9, 3}, {9}, {10}, {10}, {6, 14}, {3, 1}, {3}, {10, 11}, {8}, {2, 14}, {1}, {5}, {4}, {11, 4}, {12, 24}, {5, 18}, {13}, {7, 23}, {8}, {12}, {3, 27}, {2, 12}, {5}, {2, 9}, {13, 4}, {8, 18}, {1, 7}, {6}, {9, 29}, {8, 21}, {5}, {6, 30}, {1, 12}, {10}, {4, 15}, {7, 22}, {11, 26}, {8, 17}, {9, 29}, {5}, {3, 4}, {11, 30}, {12}, {4, 29}, {3}, {9}, {6}, {3, 4}, {1}, {10}, {3, 29}, {10, 28}, {1, 20}, {11, 13}, {3}, {3, 12}, {3, 8}, {10, 9}, {3, 26}, {8}, {7}, {5}, {13, 17}, {2, 27}, {11, 15}, {12}, {9, 19}, {2, 15}, {3, 16}, {1}, {12, 17}, {9, 1}, {6, 19}, {4}, {5}, {5}, {8, 1}, {11, 7}, {5, 2}, {9, 28}, {1}, {2, 2}, {7, 4}, {4, 22}, {7, 24}, {9, 26}, {13, 28}, {11, 26}};
 
   struct LRUCache *lRUCache = lRUCacheCreate(10);
 
   int length = sizeof(test_data) / sizeof test_data[0];
   printf("Length of test data is %d\n", length);
   char *string_to_print = malloc(sizeof(char) * 1000);
-  for (int i = 0; i < length; i++)
+  for (int i = 20535; i < length; i++)
   {
     if (test_data[i][1] == 0) // it's a get
     {
@@ -434,104 +463,7 @@ int main(void)
       printCurrentState(lRUCache, string_to_print);
     }
   }
-  // lRUCachePut(lRUCache, 1, 1); // cache is {1=1}
-  // printCurrentState(lRUCache, "put 1, 1");
-  // lRUCachePut(lRUCache, 2, 2); // cache is {1=1, 2=2}
-  // printCurrentState(lRUCache, "put 2, 2");
-  // lRUCachePut(lRUCache, 3, 3); // return 1
-  // printCurrentState(lRUCache, "put 3 3");
-  // lRUCachePut(lRUCache, 4, 4); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
-  // printCurrentState(lRUCache, "put 4 4");
-  // lRUCacheGet(lRUCache, 4); // returns -1 (not found)
-  // printCurrentState(lRUCache, "get 4");
-  // lRUCacheGet(lRUCache, 3); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-  // printCurrentState(lRUCache, "get 3");
-  // lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-  // printCurrentState(lRUCache, "get 2");
-  // lRUCacheGet(lRUCache, 1); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-  // printCurrentState(lRUCache, "get 1");
-  // lRUCachePut(lRUCache, 5, 5); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
-  // printCurrentState(lRUCache, "put 5 5");
-  // lRUCacheGet(lRUCache, 1); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-  // printCurrentState(lRUCache, "get 1");
-  // lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-  // printCurrentState(lRUCache, "get 2");
-  // lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-  // printCurrentState(lRUCache, "get 3");
-  // lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-  // printCurrentState(lRUCache, "get 4");
-  // lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-  // printCurrentState(lRUCache, "get 5");
+
   return 1;
 }
 
-// [ "LRUCache", "put", "put", "put", "put", "get", "get", "get", "get", "put", "get", "get", "get", "get", "get" ]
-//     [[3], [ 1, 1 ], [ 2, 2 ], [ 3, 3 ], [ 4, 4 ], [4], [3], [2], [1], [ 5, 5 ], [1], [2], [3], [4], [5]]
-
-// int main(void) // passed
-// {
-//   struct LRUCache *lRUCache = lRUCacheCreate(2);
-//   lRUCachePut(lRUCache, 2, 1); // cache is {1=1}
-//   printCurrentState(lRUCache, "put 2, 1");
-//   lRUCachePut(lRUCache, 1, 1); // cache is {1=1, 2=2}
-//   printCurrentState(lRUCache, "put 1, 1");
-//   lRUCachePut(lRUCache, 2, 3); // return 1
-//   printCurrentState(lRUCache, "put 2 3");
-//   lRUCachePut(lRUCache, 4, 1); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
-//   printCurrentState(lRUCache, "put 4 1");
-//   lRUCacheGet(lRUCache, 1); // returns -1 (not found)
-//   printCurrentState(lRUCache, "get 1");
-//   lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-//   printCurrentState(lRUCache, "get 2");
-
-//   return 1;
-// }
-
-// ["LRUCache","put","put","put","put","get","get"]
-// [[2],[2,1],[1,1],[2,3],[4,1],[1],[2]]
-
-// int main(void) // working
-// {
-//   struct LRUCache *lRUCache = lRUCacheCreate(2);
-//   lRUCachePut(lRUCache, 2, 1); // cache is {1=1}
-//   printCurrentState(lRUCache, "put 2, 1");
-//   lRUCachePut(lRUCache, 2, 2); // cache is {1=1, 2=2}
-//   printCurrentState(lRUCache, "put 2, 2");
-//   lRUCacheGet(lRUCache, 2); // return 1
-//   printCurrentState(lRUCache, "get 2");
-//   lRUCachePut(lRUCache, 1, 1); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
-//   printCurrentState(lRUCache, "put 1 1");
-//   lRUCachePut(lRUCache, 4, 1); // returns -1 (not found)
-//   printCurrentState(lRUCache, "put 4 1");
-//   lRUCacheGet(lRUCache, 2); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-//   printCurrentState(lRUCache, "get 2");
-
-//   return 1;
-// }
-
-// [[2,1],[2,2],[2],[1,1],[4,1],[2]]
-
-// int main(void) // works
-// {
-//   struct LRUCache *lRUCache = lRUCacheCreate(2);
-//   lRUCachePut(lRUCache, 1, 1); // cache is {1=1}
-//   printCurrentState(lRUCache, "put 1, 1");
-//   lRUCachePut(lRUCache, 2, 2); // cache is {1=1, 2=2}
-//   printCurrentState(lRUCache, "put 2, 2");
-//   lRUCacheGet(lRUCache, 1); // return 1
-//   printCurrentState(lRUCache, "get 1");
-//   lRUCachePut(lRUCache, 3, 3); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
-//   printCurrentState(lRUCache, "put 3 3");
-//   lRUCacheGet(lRUCache, 2); // returns -1 (not found)
-//   printCurrentState(lRUCache, "get 2");
-//   lRUCachePut(lRUCache, 4, 4); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-//   printCurrentState(lRUCache, "put 4 4");
-//   lRUCacheGet(lRUCache, 1); // return -1 (not found)
-//   printCurrentState(lRUCache, "get 1");
-//   lRUCacheGet(lRUCache, 3); // return 3
-//   printCurrentState(lRUCache, "get 3");
-//   lRUCacheGet(lRUCache, 4); // return 4
-//   printCurrentState(lRUCache, "get 4");
-
-//   return 1;
-// }
